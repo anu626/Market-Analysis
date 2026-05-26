@@ -26,16 +26,20 @@ That's it for the quick setup. MySQL + Redis are optional (only needed for produ
 
 ```bash
 git clone <repo-url>
-cd Market-Analysis/backend
+cd Market-Analysis
 
-# 1. Create and activate virtual environment
-python -m venv .venv
+# 0. One-time system dependency (Ubuntu/Debian only — skip if already installed)
+sudo apt install python3.10-venv -y
+
+# 1. Create and activate virtual environment — must be inside backend/
+cd backend
+python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Start the API
+# 3. Start the API (run from inside backend/)
 DATABASE_URL="sqlite:///./tech_news.db" uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 

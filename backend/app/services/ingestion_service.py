@@ -39,6 +39,7 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
     inserted = 0
     duplicates = 0
     errors = 0
+    seen_urls: set[str] = set()
 
     for raw in raw_items:
         try:
@@ -47,10 +48,16 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                 errors += 1
                 continue
 
+            url = item["url"]
+            if url in seen_urls:
+                duplicates += 1
+                continue
+            seen_urls.add(url)
+
             vertical = item.get("vertical", "tech")
             src = _ensure_source(db, item["source_name"], source_type, vertical)
 
-            existing = find_duplicate(db, url=item["url"], title=item["title"])
+            existing = find_duplicate(db, url=url, title=item["title"])
             if existing:
                 if merge_into_existing(existing, item):
                     existing.rank_score = compute_rank(existing.score, existing.created_at)
