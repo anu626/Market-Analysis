@@ -21,6 +21,7 @@ class Source(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(128), unique=True, nullable=False)
     type = Column(String(32), nullable=False)  # 'rss' | 'api'
+    vertical = Column(String(16), nullable=False, default='tech', index=True)
 
     articles = relationship("Article", back_populates="source")
 
@@ -39,6 +40,7 @@ class Article(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     rank_score = Column(Float, default=0.0, nullable=False, index=True)
     external_id = Column(String(64), nullable=True, index=True)
+    vertical = Column(String(16), nullable=False, default='tech', index=True)
 
     source = relationship("Source", back_populates="articles")
 

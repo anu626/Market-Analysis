@@ -1,180 +1,228 @@
-# Tech News Aggregator (Local Prototype)
+# Market Analysis — News Aggregator Backend
 
-A working local prototype of a tech-news aggregator (Hacker News + Techmeme style)
-implementing the full pipeline:
-
-```
-INGEST → NORMALIZE → DEDUP → STORE → RANK → CACHE → SERVE → DISPLAY
-```
-
-## Architecture
+A news aggregation pipeline serving two verticals:
+- **hirist.tech** — tech, engineering, AI/ML, startups
+- **iimjobs** — business, BFSI, HR, strategy, markets
 
 ```
-┌──────────────┐    ┌──────────────────────────────────────────────┐    ┌──────────┐
-│ Celery Beat  │──▶│  Celery worker                                │──▶│  MySQL   │
-└──────────────┘    │  ingest → normalize → dedup → store → rank  │    └──────────┘
-                    └──────────────────────────────────────────────┘          ▲
-                                          │ bust cache                        │
-                                          ▼                                   │
-                                    ┌─────────┐                               │
-                                    │  Redis  │◀──── cache ──── FastAPI ──────┘
-                                    └─────────┘                  ▲
-                                                                 │ HTTP
-                                                          ┌──────┴──────┐
-                                                          │   Next.js   │
-                                                          └─────────────┘
+sources.yaml → INGEST → NORMALIZE → DEDUP → STORE → RANK → SERVE
 ```
 
-### Key design decisions
+117 sources across RSS, Google News, Hacker News, Reddit, and job board APIs.
+Each source is tagged `vertical: tech | business | both`.
 
-- **Single ingestion orchestrator** (`app/services/ingestion_service.py`) so the
-  same code path runs from Celery, the `POST /ingest` endpoint, or a CLI.
-- **Two-stage dedup**: indexed exact-URL match first, then a fuzzy title check
-  (`rapidfuzz.token_set_ratio` ≥ 88) over the last 7 days only — cheap and
-  good enough for the prototype.
-- **HN-style ranking**: `score = (upvotes + 1) / (age_hours + 2)^1.5`, recomputed
-  on insert and every 5 minutes by a Celery Beat task.
-- **Cache fail-open**: Redis errors degrade to direct DB reads; never raise.
-- **No microservices**: one FastAPI app + one Celery worker process.
-
-## Project structure
-
-```
-backend/
-  app/
-    api/            # FastAPI routes + Pydantic schemas
-    dedup/          # URL + fuzzy title deduplication
-    ingestion/      # Source-specific fetchers (HN, RSS, Reddit)
-    models/         # SQLAlchemy models
-    normalization/  # URL/title cleaning
-    ranking/        # Time-decay scoring
-    services/       # Cache + ingestion orchestrator
-    workers/        # Celery app + tasks
-    config.py
-    database.py
-    main.py
-  requirements.txt
-frontend/
-  components/
-  pages/
-  styles/
-  package.json
-docker-compose.yml
-```
+---
 
 ## Prerequisites
 
-- Docker + Docker Compose
-- Python 3.11+
-- Node.js 18+
+- Python 3.10+
+- pip
 
-## 1. Start MySQL + Redis
+That's it for the quick setup. MySQL + Redis are optional (only needed for production scheduling).
 
-```bash
-docker compose up -d
-```
+---
 
-This launches:
-- MySQL 8 on `localhost:3306` (db `tech_news`, user `news_user`, password `news_password`)
-- Redis 7 on `localhost:6379`
-
-## 2. Backend — install + run API
+## Quick Setup (SQLite — no Docker needed)
 
 ```bash
-cd backend
+git clone <repo-url>
+cd Market-Analysis/backend
+
+# 1. Create and activate virtual environment
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# tables are auto-created on app startup
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 3. Start the API
+DATABASE_URL="sqlite:///./tech_news.db" uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The API is now at `http://localhost:8000`. Try:
+API is live at **http://localhost:8000**
+Interactive docs at **http://localhost:8000/docs**
 
-- `GET http://localhost:8000/health`
-- `GET http://localhost:8000/articles`
-- `GET http://localhost:8000/articles/latest`
-- `POST http://localhost:8000/ingest` (manual ingestion trigger)
+---
 
-OpenAPI docs: `http://localhost:8000/docs`
+## First Run — Fetch Articles
 
-## 3. Background workers
-
-In **two separate terminals**, both from `backend/` with the venv activated:
-
-```bash
-# Terminal A — Celery worker
-celery -A app.workers.celery_app.celery_app worker --loglevel=info
-
-# Terminal B — Celery Beat (scheduler — runs ingestion every 5 min, rerank every 5 min)
-celery -A app.workers.celery_app.celery_app beat --loglevel=info
-```
-
-## 4. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-The UI has:
-- **Ranked / Latest** toggle
-- **Refresh** button
-- **Trigger Ingestion** button (calls `POST /ingest`)
-
-## 5. Trigger ingestion manually
-
-Any of:
+Once the server is running, trigger ingestion:
 
 ```bash
 curl -X POST http://localhost:8000/ingest
 ```
 
-```bash
-# from backend/ with venv:
-python -c "from app.database import SessionLocal; from app.services.ingestion_service import run_full_ingestion; print(run_full_ingestion(SessionLocal()))"
-```
+This runs through all 117 sources sequentially. Takes **2–4 minutes** on first run.
+Watch progress in the terminal where uvicorn is running.
+
+Then fetch articles:
 
 ```bash
-# Enqueue Celery task
-celery -A app.workers.celery_app.celery_app call app.workers.tasks.ingest_all
+# All articles (ranked by HN-style score)
+curl http://localhost:8000/articles
+
+# Filter by vertical
+curl "http://localhost:8000/articles?vertical=tech"
+curl "http://localhost:8000/articles?vertical=business"
+
+# Latest first
+curl "http://localhost:8000/articles/latest"
+
+# Search
+curl "http://localhost:8000/articles?q=razorpay"
 ```
 
-## Configuration
+---
 
-All settings have sensible defaults in `backend/app/config.py`. Override via env vars:
+## Key Endpoints
 
-| Var | Default |
-| --- | --- |
-| `DATABASE_URL` | `mysql+pymysql://news_user:news_password@localhost:3306/tech_news` |
-| `REDIS_URL` | `redis://localhost:6379/0` |
-| `CELERY_BROKER_URL` | `redis://localhost:6379/1` |
-| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/2` |
-| `CACHE_TTL` | `300` (seconds) |
-| `INGEST_INTERVAL_SECONDS` | `300` |
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Health check |
+| GET | `/sources` | Ingested sources + article counts |
+| GET | `/sources/config` | All 117 configured sources from YAML |
+| GET | `/sources/config?vertical=tech` | Filter sources by vertical |
+| GET | `/sources/config?type=rss` | Filter by type (rss, api, google_news, json_api) |
+| GET | `/sources/config?tier=1` | Filter by tier (1=high freq, 2=mid, 3=low) |
+| GET | `/articles` | Ranked articles |
+| GET | `/articles?vertical=tech` | hirist.tech feed |
+| GET | `/articles?vertical=business` | iimjobs feed |
+| GET | `/articles?q=<term>` | Search title + summary |
+| GET | `/articles/latest` | Latest articles (chronological) |
+| GET | `/articles/{id}` | Single article |
+| POST | `/ingest` | Trigger manual ingestion |
 
-## Data sources
+---
 
-- **Hacker News** Firebase API (top 80 stories, fetched concurrently)
-- **RSS**: TechCrunch, The Verge, Ars Technica
-- **Reddit**: `r/programming` JSON endpoint
+## Source Configuration
 
-No scraping, no auth, no proxies — strictly public APIs.
+All sources live in `backend/app/config/sources.yaml`.
 
-## Database schema
+```yaml
+sources:
+  - name: ET Tech
+    type: rss
+    url: https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms
+    country: IN
+    vertical: both        # tech | business | both
+    authority: 0.85
+    tier: 1               # 1=5min, 2=15min, 3=60min
+    tags: [mainstream, business, national]
+```
 
-- `articles` — `id, title, url (unique), source_id, source_name, score, summary, published_at, created_at, rank_score, external_id`
-- `sources` — `id, name (unique), type` (rss/api)
-- `ingestion_logs` — per-source fetch stats (fetched/inserted/duplicates/errors)
+**Source breakdown:**
 
-## Future work (intentionally out of scope)
+| Vertical | Count | Examples |
+|---|---|---|
+| `tech` | 46 | HN, TechCrunch, arXiv, engineering blogs, OpenAI/Anthropic |
+| `business` | 49 | ET Markets, BFSI, HR World, McKinsey, Bloomberg Markets |
+| `both` | 22 | Inc42, YourStory, ET Tech, job boards |
 
-- Embedding-based semantic dedup (stage 3)
-- LLM-generated TL;DR summaries
-- Tags / topic classification
-- Pagination cursor instead of offset
-- Migrations via Alembic
+To add a new source, append an entry to `sources.yaml` — no code change needed.
+
+---
+
+## Project Structure
+
+```
+backend/
+  app/
+    api/
+      routes.py             # FastAPI endpoints
+      schemas.py            # Pydantic response models
+    config/
+      sources.yaml          # All 117 news sources
+    dedup/
+      deduplicator.py       # URL exact + fuzzy title dedup (rapidfuzz)
+    ingestion/
+      source_loader.py      # Reads sources.yaml
+      rss_fetcher.py        # RSS + Google News (feedparser, 15s timeout)
+      hn_fetcher.py         # Hacker News Firebase + Algolia APIs
+      reddit_fetcher.py     # Multi-subreddit Reddit JSON
+      json_api_fetcher.py   # Greenhouse + Lever job boards
+    models/
+      article.py            # SQLAlchemy: Article, Source, IngestionLog
+    normalization/
+      normalizer.py         # URL cleaning, title/summary sanitization
+    ranking/
+      ranker.py             # HN-style time decay: (score+1)/(age_hours+2)^1.5
+    services/
+      ingestion_service.py  # Orchestrator: fetch→normalize→dedup→store→rank
+      cache.py              # Redis cache (fails open — works without Redis)
+    workers/
+      tasks.py              # Celery tasks (ingest_all, rerank_all)
+    config.py               # Settings (DATABASE_URL, REDIS_URL, etc.)
+    database.py             # SQLAlchemy engine + session
+    main.py                 # FastAPI app
+  requirements.txt
+```
+
+---
+
+## Configuration — Environment Variables
+
+| Variable | Default | Notes |
+|---|---|---|
+| `DATABASE_URL` | `mysql+pymysql://news_user:news_password@localhost:3306/tech_news` | Use `sqlite:///./tech_news.db` for local dev |
+| `REDIS_URL` | `redis://localhost:6379/0` | Optional — cache gracefully skips if Redis is down |
+| `CELERY_BROKER_URL` | `redis://localhost:6379/1` | Only needed for scheduled ingestion |
+| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/2` | Only needed for Celery |
+| `CACHE_TTL` | `300` | Cache TTL in seconds |
+| `HN_FETCH_LIMIT` | `80` | Max HN items per source per run |
+
+---
+
+## Production Setup (MySQL + Redis + Celery)
+
+### 1. Start infrastructure
+
+```bash
+# from repo root
+docker compose up -d
+```
+
+Starts MySQL 8 on `localhost:3306` and Redis 7 on `localhost:6379`.
+
+### 2. Start the API
+
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 3. Start Celery workers (two terminals)
+
+```bash
+# Terminal A — worker
+celery -A app.workers.celery_app.celery_app worker --loglevel=info
+
+# Terminal B — scheduler (runs ingestion every 5 min, rerank every 5 min)
+celery -A app.workers.celery_app.celery_app beat --loglevel=info
+```
+
+---
+
+## Known Broken Feeds (7 of 117)
+
+These return 0 articles — the remaining 110 work fine:
+
+| Source | Reason |
+|---|---|
+| Entrackr | Malformed XML |
+| MoneyControl Tech | Malformed XML |
+| Business Standard Tech | Malformed XML |
+| Analytics India Magazine | Malformed XML |
+| Tech in Asia India | Returns HTML instead of RSS |
+| Zerodha Tech | Undefined XML entity in feed |
+| Swiggy Bytes | SSL certificate error |
+
+---
+
+## Vertical Filtering Logic
+
+- `?vertical=tech` → articles where `vertical IN ('tech', 'both')`
+- `?vertical=business` → articles where `vertical IN ('business', 'both')`
+- No param → all articles
+
+Stories tagged `both` (funding rounds, policy, IPOs) appear on both platforms.

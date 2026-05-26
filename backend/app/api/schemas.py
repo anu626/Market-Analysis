@@ -13,6 +13,7 @@ class ArticleOut(BaseModel):
     published_at: datetime | None = None
     created_at: datetime
     rank_score: float
+    vertical: str = "tech"
 
     class Config:
         from_attributes = True

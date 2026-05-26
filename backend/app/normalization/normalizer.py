@@ -95,4 +95,5 @@ def normalize_item(raw: dict) -> dict | None:
         "external_id": str(raw.get("external_id")) if raw.get("external_id") else None,
         "published_at": to_utc(raw.get("published_at")),
         "summary": clean_summary(raw.get("summary")),
+        "vertical": raw.get("vertical", "tech"),
     }

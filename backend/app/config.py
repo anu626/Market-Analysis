@@ -14,17 +14,8 @@ class Settings(BaseSettings):
     CACHE_TTL: int = int(os.getenv("CACHE_TTL", "300"))
     INGEST_INTERVAL_SECONDS: int = int(os.getenv("INGEST_INTERVAL_SECONDS", "300"))
 
-    HN_TOP_STORIES_URL: str = "https://hacker-news.firebaseio.com/v0/topstories.json"
     HN_ITEM_URL: str = "https://hacker-news.firebaseio.com/v0/item/{id}.json"
     HN_FETCH_LIMIT: int = 80
-
-    RSS_FEEDS: list[dict] = [
-        {"name": "TechCrunch", "url": "https://techcrunch.com/feed/"},
-        {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml"},
-        {"name": "Ars Technica", "url": "http://feeds.arstechnica.com/arstechnica/index"},
-    ]
-    REDDIT_URL: str = "https://www.reddit.com/r/programming/.json"
-    REDDIT_USER_AGENT: str = "tech-news-aggregator/0.1 (local prototype)"
 
 
 settings = Settings()

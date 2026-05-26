@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.dedup.deduplicator import find_duplicate, merge_into_existing
 from app.ingestion.hn_fetcher import fetch_hn
+from app.ingestion.json_api_fetcher import fetch_json_api
 from app.ingestion.reddit_fetcher import fetch_reddit
 from app.ingestion.rss_fetcher import fetch_rss
 from app.models import Article, IngestionLog, Source
@@ -21,11 +22,13 @@ from app.services.cache import cache_delete_prefix
 logger = logging.getLogger(__name__)
 
 
-def _ensure_source(db: Session, name: str, type_: str) -> Source:
+def _ensure_source(db: Session, name: str, type_: str, vertical: str = "tech") -> Source:
     src = db.query(Source).filter(Source.name == name).first()
     if src:
+        if src.vertical != vertical:
+            src.vertical = vertical
         return src
-    src = Source(name=name, type=type_)
+    src = Source(name=name, type=type_, vertical=vertical)
     db.add(src)
     db.flush()
     return src
@@ -44,7 +47,8 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                 errors += 1
                 continue
 
-            src = _ensure_source(db, item["source_name"], source_type)
+            vertical = item.get("vertical", "tech")
+            src = _ensure_source(db, item["source_name"], source_type, vertical)
 
             existing = find_duplicate(db, url=item["url"], title=item["title"])
             if existing:
@@ -65,6 +69,7 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                 created_at=now,
                 external_id=item.get("external_id"),
                 rank_score=compute_rank(item["score"], now),
+                vertical=vertical,
             )
             db.add(article)
             inserted += 1
@@ -109,6 +114,7 @@ def run_full_ingestion(db: Session) -> dict:
         ("Hacker News", fetch_hn, "api"),
         ("RSS", fetch_rss, "rss"),
         ("Reddit", fetch_reddit, "api"),
+        ("Job Boards", fetch_json_api, "json_api"),
     ):
         stats = _run_source(db, name, fetcher, kind)
         for k in totals:

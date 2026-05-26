@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.api.schemas import ArticleOut, IngestionResult
 from app.database import get_db
+from app.ingestion.source_loader import sources_of_type
 from app.models import Article
 from app.services.cache import cache_get, cache_set
 from app.services.ingestion_service import run_full_ingestion
@@ -27,6 +28,45 @@ def list_sources(db: Session = Depends(get_db)):
     return [{"name": r[0], "count": r[1]} for r in rows]
 
 
+@router.get("/sources/config")
+def list_configured_sources(
+    vertical: str | None = Query(None, description="tech | business | both"),
+    type_: str | None = Query(None, alias="type", description="rss | api | google_news | json_api"),
+    tier: int | None = Query(None, description="1 | 2 | 3"),
+):
+    """All sources from sources.yaml — no ingestion needed to call this."""
+    srcs = sources_of_type("rss", "google_news", "api", "json_api", "scraper")
+    if vertical:
+        srcs = [s for s in srcs if s.get("vertical") == vertical]
+    if type_:
+        srcs = [s for s in srcs if s.get("type") == type_]
+    if tier:
+        srcs = [s for s in srcs if s.get("tier") == tier]
+    return [
+        {
+            "name": s["name"],
+            "type": s.get("type"),
+            "vertical": s.get("vertical", "tech"),
+            "tier": s.get("tier"),
+            "authority": s.get("authority"),
+            "country": s.get("country"),
+            "tags": s.get("tags", []),
+            "url": s.get("url"),
+        }
+        for s in srcs
+    ]
+
+
+def _apply_vertical(q, vertical: str | None):
+    if not vertical:
+        return q
+    if vertical == "tech":
+        return q.filter(Article.vertical.in_(["tech", "both"]))
+    if vertical == "business":
+        return q.filter(Article.vertical.in_(["business", "both"]))
+    return q
+
+
 def _apply_search(q, search: str | None):
     if not search:
         return q
@@ -41,8 +81,9 @@ def list_articles(
     offset: int = Query(0, ge=0),
     source: str | None = Query(None),
     q: str | None = Query(None, description="Search title and summary"),
+    vertical: str | None = Query(None, description="tech | business"),
 ):
-    cache_key = f"articles:ranked:{source or 'all'}:{q or '_'}:{limit}:{offset}"
+    cache_key = f"articles:ranked:{source or 'all'}:{q or '_'}:{vertical or 'all'}:{limit}:{offset}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
@@ -50,6 +91,7 @@ def list_articles(
     query = db.query(Article)
     if source:
         query = query.filter(Article.source_name == source)
+    query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
     rows = (
         query.order_by(Article.rank_score.desc())
@@ -69,8 +111,9 @@ def latest_articles(
     offset: int = Query(0, ge=0),
     source: str | None = Query(None),
     q: str | None = Query(None, description="Search title and summary"),
+    vertical: str | None = Query(None, description="tech | business"),
 ):
-    cache_key = f"articles:latest:{source or 'all'}:{q or '_'}:{limit}:{offset}"
+    cache_key = f"articles:latest:{source or 'all'}:{q or '_'}:{vertical or 'all'}:{limit}:{offset}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
@@ -78,6 +121,7 @@ def latest_articles(
     query = db.query(Article)
     if source:
         query = query.filter(Article.source_name == source)
+    query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
     rows = (
         query.order_by(Article.created_at.desc())

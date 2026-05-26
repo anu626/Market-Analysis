@@ -1,23 +1,30 @@
-"""RSS feed ingestion. Uses feedparser for tolerant parsing."""
+"""RSS / Google News feed ingestion. Uses feedparser for tolerant parsing."""
 
 import logging
+import socket
 from datetime import datetime
 from time import mktime
 
 import feedparser
 
-from app.config import settings
+from app.ingestion.source_loader import sources_of_type
 
 logger = logging.getLogger(__name__)
 
+_FEED_TIMEOUT = 15  # seconds per feed
 
-def _parse_feed(name: str, url: str) -> list[dict]:
+
+def _parse_feed(name: str, url: str, vertical: str = 'tech') -> list[dict]:
     items: list[dict] = []
+    old_timeout = socket.getdefaulttimeout()
     try:
+        socket.setdefaulttimeout(_FEED_TIMEOUT)
         parsed = feedparser.parse(url, request_headers={"User-Agent": "tech-news-aggregator/0.1"})
     except Exception as e:
         logger.warning("RSS parse failed %s: %s", url, e)
         return items
+    finally:
+        socket.setdefaulttimeout(old_timeout)
 
     if parsed.bozo and not parsed.entries:
         logger.warning("RSS feed appears malformed: %s (%s)", url, parsed.bozo_exception)
@@ -54,6 +61,7 @@ def _parse_feed(name: str, url: str) -> list[dict]:
                 "external_id": entry.get("id") or link,
                 "published_at": published_at,
                 "summary": summary,
+                "vertical": vertical,
             }
         )
     return items
@@ -61,8 +69,8 @@ def _parse_feed(name: str, url: str) -> list[dict]:
 
 def fetch_rss() -> list[dict]:
     out: list[dict] = []
-    for feed in settings.RSS_FEEDS:
-        items = _parse_feed(feed["name"], feed["url"])
+    for feed in sources_of_type("rss", "google_news"):
+        items = _parse_feed(feed["name"], feed["url"], feed.get("vertical", "tech"))
         logger.info("RSS %s -> %d items", feed["name"], len(items))
         out.extend(items)
     return out
