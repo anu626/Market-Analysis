@@ -97,8 +97,9 @@ function renderArticleHtml(a, idx) {
         </div>
         ${summary ? `<p class="article-summary">${summary}</p>` : ""}
         <div class="article-meta">
-          <span class="meta-item score-up">▲ ${a.score} points</span>
+          ${a.score > 0 ? `<span class="meta-item score-up">▲ ${a.score} points</span>` : ""}
           <span class="meta-item"><span class="source-pill">${escapeHtml(a.source_name)}</span></span>
+          ${(a.source_count ?? 1) > 1 ? `<span class="meta-item source-count">+${a.source_count - 1} more source${a.source_count > 2 ? "s" : ""}</span>` : ""}
           <span class="meta-item">⏱ ${when}</span>
           <span class="meta-item rank-score">rank ${rank}</span>
         </div>

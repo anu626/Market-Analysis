@@ -368,6 +368,15 @@ input, button { font-family: inherit; }
   letter-spacing: 0.01em;
 }
 .score-up { color: var(--success); font-weight: 500; }
+.source-count {
+  background: #2a1f00;
+  color: #f0a500;
+  border: 1px solid #5a3e00;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+}
 .rank-score {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;

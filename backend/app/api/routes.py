@@ -10,6 +10,30 @@ from app.ranking.ranker import recompute_all
 from app.services.cache import cache_delete_prefix, cache_get, cache_set
 from app.services.ingestion_service import run_full_ingestion
 
+
+
+def _dedup_by_story(rows: list, offset: int, limit: int) -> list[dict]:
+    """Deduplicate articles sharing the same story_hash, keeping the top-ranked.
+    Returns dicts with an injected source_count field."""
+    seen: dict[str, dict] = {}  # story_hash -> best article dict
+    counts: dict[str, set] = {}  # story_hash -> set of source_names
+
+    for r in rows:
+        key = r.story_hash or str(r.id)
+        d = ArticleOut.model_validate(r).model_dump()
+        if key not in seen:
+            seen[key] = d
+            counts[key] = {r.source_name}
+        else:
+            counts[key].add(r.source_name)
+
+    result = []
+    for key, article in seen.items():
+        article["source_count"] = len(counts[key])
+        result.append(article)
+
+    return result[offset: offset + limit]
+
 router = APIRouter()
 
 
@@ -94,13 +118,13 @@ def list_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
+    # Fetch extra rows so dedup still fills the requested page after collapsing same-story articles
     rows = (
         query.order_by(Article.rank_score.desc())
-        .offset(offset)
-        .limit(limit)
+        .limit((offset + limit) * 5)
         .all()
     )
-    payload = [ArticleOut.model_validate(r).model_dump() for r in rows]
+    payload = _dedup_by_story(rows, offset, limit)
     cache_set(cache_key, payload)
     return payload
 

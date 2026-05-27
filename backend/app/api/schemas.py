@@ -14,6 +14,7 @@ class ArticleOut(BaseModel):
     created_at: datetime
     rank_score: float
     vertical: str = "tech"
+    source_count: int = 1
 
     class Config:
         from_attributes = True

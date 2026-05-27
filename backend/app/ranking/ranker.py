@@ -109,6 +109,7 @@ def compute_rank(
     published_at: datetime | None = None,
 ) -> float:
     now = now or datetime.utcnow()
+    
     authority_map, indian_sources = _load_source_config()
 
     engagement = _engagement_signal(score)
