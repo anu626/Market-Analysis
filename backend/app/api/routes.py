@@ -6,7 +6,8 @@ from app.api.schemas import ArticleOut, IngestionResult
 from app.database import get_db
 from app.ingestion.source_loader import sources_of_type
 from app.models import Article
-from app.services.cache import cache_get, cache_set
+from app.ranking.ranker import recompute_all
+from app.services.cache import cache_delete_prefix, cache_get, cache_set
 from app.services.ingestion_service import run_full_ingestion
 
 router = APIRouter()
@@ -147,3 +148,11 @@ def trigger_ingestion(db: Session = Depends(get_db)):
     """Manual trigger. Runs synchronously — fine for prototype, slow for prod."""
     stats = run_full_ingestion(db)
     return IngestionResult(**stats)
+
+
+@router.post("/rerank")
+def trigger_rerank(db: Session = Depends(get_db)):
+    """Recompute rank_score for all articles with the current multi-signal formula and bust cache."""
+    n = recompute_all(db)
+    cache_delete_prefix("articles:")
+    return {"reranked": n}

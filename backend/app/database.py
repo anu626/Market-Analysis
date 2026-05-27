@@ -26,3 +26,18 @@ def get_db():
 def init_db():
     from app.models import article  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    _migrate(engine)
+
+
+def _migrate(eng):
+    """Add columns that were introduced after initial table creation."""
+    from sqlalchemy import inspect as sa_inspect, text
+    inspector = sa_inspect(eng)
+    tables = inspector.get_table_names()
+    if "articles" not in tables:
+        return
+    existing = {c["name"] for c in inspector.get_columns("articles")}
+    with eng.connect() as conn:
+        if "story_hash" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN story_hash VARCHAR(12)"))
+            conn.commit()

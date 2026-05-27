@@ -16,7 +16,7 @@ from app.ingestion.reddit_fetcher import fetch_reddit
 from app.ingestion.rss_fetcher import fetch_rss
 from app.models import Article, IngestionLog, Source
 from app.normalization.normalizer import normalize_item
-from app.ranking.ranker import compute_rank
+from app.ranking.ranker import compute_rank, recompute_all, story_hash
 from app.services.cache import cache_delete_prefix
 
 logger = logging.getLogger(__name__)
@@ -60,22 +60,37 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
             existing = find_duplicate(db, url=url, title=item["title"])
             if existing:
                 if merge_into_existing(existing, item):
-                    existing.rank_score = compute_rank(existing.score, existing.created_at)
+                    existing.rank_score = compute_rank(
+                        existing.score,
+                        existing.created_at,
+                        source_name=existing.source_name or "",
+                        title=existing.title or "",
+                        published_at=existing.published_at,
+                    )
                 duplicates += 1
                 continue
 
             now = datetime.utcnow()
+            title = item["title"]
+            source_name = item["source_name"]
             article = Article(
-                title=item["title"],
+                title=title,
                 url=item["url"],
                 source_id=src.id,
-                source_name=item["source_name"],
+                source_name=source_name,
                 score=item["score"],
                 summary=item.get("summary"),
                 published_at=item.get("published_at"),
                 created_at=now,
                 external_id=item.get("external_id"),
-                rank_score=compute_rank(item["score"], now),
+                story_hash=story_hash(title),
+                rank_score=compute_rank(
+                    item["score"],
+                    now,
+                    source_name=source_name,
+                    title=title,
+                    published_at=item.get("published_at"),
+                ),
                 vertical=vertical,
             )
             db.add(article)
@@ -128,5 +143,6 @@ def run_full_ingestion(db: Session) -> dict:
             totals[k] += stats[k]
         logger.info("Ingestion %s done: %s", name, stats)
 
+    recompute_all(db)
     cache_delete_prefix("articles:")
     return totals

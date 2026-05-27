@@ -39,6 +39,7 @@ class Article(Base):
     published_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     rank_score = Column(Float, default=0.0, nullable=False, index=True)
+    story_hash = Column(String(12), nullable=True, index=True)
     external_id = Column(String(64), nullable=True, index=True)
     vertical = Column(String(16), nullable=False, default='tech', index=True)
 
