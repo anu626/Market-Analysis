@@ -80,6 +80,8 @@ const setStatus = (text, kind = "") => {
   }
 };
 
+const VERTICAL_LABELS = { ai: "AI", software: "Software", hardware: "Hardware", hiring: "Hiring", industry: "Industry" };
+
 // --- Rendering ---
 function renderArticleHtml(a, idx) {
   const domain = domainOf(a.url);
@@ -88,17 +90,21 @@ function renderArticleHtml(a, idx) {
   const when = timeAgo(a.published_at || a.created_at);
   const rank = (a.rank_score ?? 0).toFixed(2);
   const rankClass = idx < 3 ? "top" : "";
+  const verticalLabel = VERTICAL_LABELS[a.vertical] ?? "";
+  const highlightedClass = a.is_highlighted ? " article--highlighted" : "";
   return `
-    <li class="article" data-id="${a.id}">
+    <li class="article${highlightedClass}" data-id="${a.id}">
       <div class="article-rank ${rankClass}">${idx + 1}</div>
       <div class="article-body">
         <div class="article-title">
+          ${a.is_highlighted ? `<span class="featured-badge">Featured</span>` : ""}
           ${title}${domain ? `<span class="article-domain">${escapeHtml(domain)}</span>` : ""}
         </div>
         ${summary ? `<p class="article-summary">${summary}</p>` : ""}
         <div class="article-meta">
           ${a.score > 0 ? `<span class="meta-item score-up">▲ ${a.score} points</span>` : ""}
           <span class="meta-item"><span class="source-pill">${escapeHtml(a.source_name)}</span></span>
+          ${verticalLabel ? `<span class="meta-item"><span class="vertical-pill vertical-pill--${a.vertical}">${verticalLabel}</span></span>` : ""}
           ${(a.source_count ?? 1) > 1 ? `<span class="meta-item source-count">+${a.source_count - 1} more source${a.source_count > 2 ? "s" : ""}</span>` : ""}
           <span class="meta-item">⏱ ${when}</span>
           <span class="meta-item rank-score">rank ${rank}</span>

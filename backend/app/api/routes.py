@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -82,13 +84,13 @@ def list_configured_sources(
     ]
 
 
+_VALID_VERTICALS = {"ai", "software", "hardware", "industry", "hiring"}
+
 def _apply_vertical(q, vertical: str | None):
     if not vertical:
         return q
-    if vertical == "tech":
-        return q.filter(Article.vertical.in_(["tech", "both"]))
-    if vertical == "business":
-        return q.filter(Article.vertical.in_(["business", "both"]))
+    if vertical in _VALID_VERTICALS:
+        return q.filter(Article.vertical == vertical)
     return q
 
 
@@ -99,6 +101,11 @@ def _apply_search(q, search: str | None):
     return q.filter(or_(Article.title.ilike(pattern), Article.summary.ilike(pattern)))
 
 
+def _apply_age_cutoff(q):
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=60)
+    return q.filter(Article.created_at >= cutoff)
+
+
 @router.get("/articles", response_model=list[ArticleOut])
 def list_articles(
     db: Session = Depends(get_db),
@@ -106,7 +113,7 @@ def list_articles(
     offset: int = Query(0, ge=0),
     source: str | None = Query(None),
     q: str | None = Query(None, description="Search title and summary"),
-    vertical: str | None = Query(None, description="tech | business"),
+    vertical: str | None = Query(None, description="ai | software | hardware | industry | hiring"),
 ):
     cache_key = f"articles:ranked:{source or 'all'}:{q or '_'}:{vertical or 'all'}:{limit}:{offset}"
     cached = cache_get(cache_key)
@@ -118,6 +125,7 @@ def list_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
+    query = _apply_age_cutoff(query)
     # Fetch extra rows so dedup still fills the requested page after collapsing same-story articles
     rows = (
         query.order_by(Article.rank_score.desc())
@@ -136,7 +144,7 @@ def latest_articles(
     offset: int = Query(0, ge=0),
     source: str | None = Query(None),
     q: str | None = Query(None, description="Search title and summary"),
-    vertical: str | None = Query(None, description="tech | business"),
+    vertical: str | None = Query(None, description="ai | software | hardware | industry | hiring"),
 ):
     cache_key = f"articles:latest:{source or 'all'}:{q or '_'}:{vertical or 'all'}:{limit}:{offset}"
     cached = cache_get(cache_key)
@@ -148,6 +156,7 @@ def latest_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
+    query = _apply_age_cutoff(query)
     rows = (
         query.order_by(Article.created_at.desc())
         .offset(offset)

@@ -41,3 +41,6 @@ def _migrate(eng):
         if "story_hash" not in existing:
             conn.execute(text("ALTER TABLE articles ADD COLUMN story_hash VARCHAR(12)"))
             conn.commit()
+        if "is_highlighted" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN is_highlighted BOOLEAN NOT NULL DEFAULT 0"))
+            conn.commit()

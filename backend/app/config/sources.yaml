@@ -1,1108 +1,668 @@
-# Country: IN
-# Format: each entry has type (rss|api|google_news|json_api), url, country, category, authority (0-1)
-# `authority` feeds into the source_authority signal in ranking
-# `tier` controls ingestion frequency: 1=5min, 2=15min, 3=60min
+# Verticals: ai | software | hardware | industry | hiring
+# authority: 0-1 (feeds source_authority ranking signal)
+# tier: 1=high-freq, 2=medium, 3=low-freq
 
 sources:
 
   # ============================================================
-  # NATIONAL — Indian tech press (TIER 1 priority)
-  # ============================================================
-  - name: YourStory
-    type: rss
-    url: https://yourstory.com/feed
-    country: IN
-    vertical: both
-    authority: 0.80
-    tier: 1
-    tags: [startup, funding, national]
-
-  - name: Inc42
-    type: rss
-    url: https://inc42.com/feed/
-    country: IN
-    vertical: both
-    authority: 0.85
-    tier: 1
-    tags: [startup, funding, national]
-
-  - name: Entrackr
-    type: rss
-    url: https://entrackr.com/feed/
-    country: IN
-    vertical: both
-    authority: 0.80
-    tier: 1
-    tags: [startup, funding, national]
-
-  - name: MoneyControl Tech
-    type: rss
-    url: https://www.moneycontrol.com/rss/technology.xml
-    country: IN
-    vertical: both
-    authority: 0.75
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: ET Tech
-    type: rss
-    url: https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms
-    country: IN
-    vertical: both
-    authority: 0.85
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: Medianama
-    type: rss
-    url: https://www.medianama.com/feed/
-    country: IN
-    vertical: both
-    authority: 0.90
-    tier: 1
-    tags: [policy, regulation, national]
-
-  - name: Analytics India Magazine
-    type: rss
-    url: https://analyticsindiamag.com/feed/
-    country: IN
-    vertical: tech
-    authority: 0.70
-    tier: 1
-    tags: [ai, ml, national]
-
-  - name: LiveMint Technology
-    type: rss
-    url: https://www.livemint.com/rss/technology
-    country: IN
-    vertical: both
-    authority: 0.80
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: Business Standard Tech
-    type: rss
-    url: https://www.business-standard.com/rss/technology-10806.rss
-    country: IN
-    vertical: both
-    authority: 0.80
-    tier: 2
-    tags: [mainstream, business, national]
-
-  - name: The Hindu Sci-Tech
-    type: rss
-    url: https://www.thehindu.com/sci-tech/feeder/default.rss
-    country: IN
-    vertical: tech
-    authority: 0.80
-    tier: 2
-    tags: [mainstream, national]
-
-  - name: Tech in Asia India
-    type: rss
-    url: https://www.techinasia.com/feed
-    country: IN
-    vertical: both
-    authority: 0.70
-    tier: 2
-    tags: [startup, asia, national]
-
-  # ============================================================
-  # NATIONAL — Google News aggregation (HIGH leverage)
-  # Each query gets dedup'd by your clustering layer
-  # ============================================================
-  - name: Google News - India Tech
-    type: google_news
-    url: https://news.google.com/rss/search?q=india+technology&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: tech
-    authority: 0.50
-    tier: 1
-    tags: [aggregator, national]
-
-  - name: Google News - Indian Startups
-    type: google_news
-    url: https://news.google.com/rss/search?q=indian+startup+funding&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: both
-    authority: 0.50
-    tier: 1
-    tags: [aggregator, startup, national]
-
-  - name: Google News - India AI
-    type: google_news
-    url: https://news.google.com/rss/search?q=india+artificial+intelligence&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: tech
-    authority: 0.50
-    tier: 2
-    tags: [aggregator, ai, national]
-
-  - name: Google News - India Tech Policy
-    type: google_news
-    url: https://news.google.com/rss/search?q=india+tech+regulation+OR+MeitY+OR+RBI+tech&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: both
-    authority: 0.50
-    tier: 2
-    tags: [aggregator, policy, national]
-
-  - name: Google News - India IPO
-    type: google_news
-    url: https://news.google.com/rss/search?q=india+tech+IPO&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: both
-    authority: 0.50
-    tier: 3
-    tags: [aggregator, business, national]
-
-  # Topic-section feed (different from search; broader)
-  - name: Google News - Technology Section IN
-    type: google_news
-    url: https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: tech
-    authority: 0.50
-    tier: 1
-    tags: [aggregator, national]
-
-  # ============================================================
-  # INDIAN COMPANY ENGINEERING BLOGS (the moat)
-  # ============================================================
-  - name: Razorpay Engineering
-    type: rss
-    url: https://engineering.razorpay.com/feed
-    country: IN
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: Zerodha Tech
-    type: rss
-    url: https://zerodha.tech/blog/feed/
-    country: IN
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: Swiggy Bytes
-    type: rss
-    url: https://bytes.swiggy.com/feed
-    country: IN
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: Zomato Engineering
-    type: rss
-    url: https://blog.zomato.com/feed
-    country: IN
-    vertical: tech
-    authority: 0.80
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: Flipkart Tech
-    type: rss
-    url: https://tech.flipkart.com/feed
-    country: IN
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: CRED Engineering
-    type: rss
-    url: https://engineering.cred.club/feed
-    country: IN
-    vertical: tech
-    authority: 0.80
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: PhonePe Engineering
-    type: rss
-    url: https://medium.com/feed/phonepe-engineering
-    country: IN
-    vertical: tech
-    authority: 0.80
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: Meesho Tech
-    type: rss
-    url: https://medium.com/feed/meesho-tech
-    country: IN
-    vertical: tech
-    authority: 0.75
-    tier: 3
-    tags: [engineering, company-blog, national]
-
-  - name: Gojek Engineering
-    type: rss
-    url: https://www.gojek.io/feed.xml
-    country: ID
-    vertical: tech
-    authority: 0.80
-    tier: 3
-    tags: [engineering, company-blog, asia]
-
-  # ============================================================
-  # INTERNATIONAL — Tech press (for the 30% global feed)
-  # ============================================================
-  - name: TechCrunch
-    type: rss
-    url: https://techcrunch.com/feed/
-    country: US
-    vertical: tech
-    authority: 0.85
-    tier: 1
-    tags: [mainstream, global]
-
-  - name: The Verge
-    type: rss
-    url: https://www.theverge.com/rss/index.xml
-    country: US
-    vertical: tech
-    authority: 0.85
-    tier: 1
-    tags: [mainstream, global]
-
-  - name: Ars Technica
-    type: rss
-    url: https://arstechnica.com/feed/
-    country: US
-    vertical: tech
-    authority: 0.85
-    tier: 2
-    tags: [mainstream, deep, global]
-
-  - name: Wired
-    type: rss
-    url: https://www.wired.com/feed/rss
-    country: US
-    vertical: tech
-    authority: 0.80
-    tier: 2
-    tags: [mainstream, global]
-
-  - name: MIT Technology Review
-    type: rss
-    url: https://www.technologyreview.com/feed/
-    country: US
-    vertical: tech
-    authority: 0.90
-    tier: 2
-    tags: [research, deep, global]
-
-  - name: Bloomberg Technology
-    type: rss
-    url: https://feeds.bloomberg.com/technology/news.rss
-    country: US
-    vertical: both
-    authority: 0.95
-    tier: 1
-    tags: [business, global]
-
-  - name: Reuters Technology
-    type: rss
-    url: https://www.reutersagency.com/feed/?best-sectors=tech&post_type=best
-    country: US
-    vertical: both
-    authority: 0.95
-    tier: 2
-    tags: [mainstream, global]
-
-  - name: The Information (free)
-    type: rss
-    url: https://www.theinformation.com/feed
-    country: US
-    vertical: tech
-    authority: 0.90
-    tier: 3
-    tags: [paid-source, deep, global]
-
-  # ============================================================
-  # AGGREGATORS — Hacker News & Reddit (you have these)
-  # ============================================================
-  - name: Hacker News Top
-    type: api
-    url: https://hacker-news.firebaseio.com/v0/topstories.json
-    country: US
-    vertical: tech
-    authority: 0.70
-    tier: 1
-    tags: [aggregator, global]
-
-  - name: Hacker News Best
-    type: api
-    url: https://hacker-news.firebaseio.com/v0/beststories.json
-    country: US
-    vertical: tech
-    authority: 0.70
-    tier: 2
-    tags: [aggregator, global]
-
-  - name: HN Algolia (high-score filter)
-    type: api
-    url: https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points>100
-    country: US
-    vertical: tech
-    authority: 0.70
-    tier: 2
-    tags: [aggregator, global]
-
-  - name: Reddit r/IndianStartups
-    type: api
-    url: https://www.reddit.com/r/IndianStartups/hot.json?limit=50
-    country: IN
-    vertical: both
-    authority: 0.55
-    tier: 1
-    tags: [aggregator, startup, national]
-
-  - name: Reddit r/india (tech filter)
-    type: api
-    url: https://www.reddit.com/r/india/search.json?q=flair%3ATechnology&restrict_sr=1&sort=hot
-    country: IN
-    vertical: tech
-    authority: 0.50
-    tier: 2
-    tags: [aggregator, national]
-
-  - name: Reddit r/developersIndia
-    type: api
-    url: https://www.reddit.com/r/developersIndia/hot.json?limit=50
-    country: IN
-    vertical: tech
-    authority: 0.55
-    tier: 2
-    tags: [aggregator, engineering, national]
-
-  - name: Reddit r/MachineLearning
-    type: api
-    url: https://www.reddit.com/r/MachineLearning/hot.json?limit=50
-    country: US
-    vertical: tech
-    authority: 0.65
-    tier: 2
-    tags: [aggregator, ai, global]
-
-  - name: Reddit r/programming
-    type: api
-    url: https://www.reddit.com/r/programming/hot.json?limit=50
-    country: US
-    vertical: tech
-    authority: 0.60
-    tier: 2
-    tags: [aggregator, engineering, global]
-
-  - name: Reddit r/LocalLLaMA
-    type: api
-    url: https://www.reddit.com/r/LocalLLaMA/hot.json?limit=50
-    country: US
-    vertical: tech
-    authority: 0.55
-    tier: 3
-    tags: [aggregator, ai, global]
-
-  # ============================================================
-  # AI LAB / GLOBAL COMPANY BLOGS
+  # AI — Labs & Research
   # ============================================================
   - name: OpenAI Blog
     type: rss
     url: https://openai.com/blog/rss.xml
     country: US
-    vertical: tech
+    vertical: ai
     authority: 1.00
     tier: 1
-    tags: [ai, company-blog, global]
+    tags: [ai, company-blog]
 
   - name: Anthropic News
     type: rss
     url: https://www.anthropic.com/news/rss.xml
     country: US
-    vertical: tech
+    vertical: ai
     authority: 1.00
     tier: 1
-    tags: [ai, company-blog, global]
+    tags: [ai, company-blog]
 
   - name: Google AI Blog
     type: rss
     url: https://blog.google/technology/ai/rss/
     country: US
-    vertical: tech
+    vertical: ai
     authority: 0.95
     tier: 2
-    tags: [ai, company-blog, global]
+    tags: [ai, company-blog]
 
   - name: Google DeepMind
     type: rss
     url: https://deepmind.google/blog/rss.xml
     country: US
-    vertical: tech
+    vertical: ai
     authority: 0.95
     tier: 2
-    tags: [ai, research, global]
+    tags: [ai, research]
 
   - name: Meta AI Blog
     type: rss
     url: https://ai.meta.com/blog/rss/
     country: US
-    vertical: tech
+    vertical: ai
     authority: 0.90
     tier: 2
-    tags: [ai, company-blog, global]
+    tags: [ai, company-blog]
 
   - name: Hugging Face Blog
     type: rss
     url: https://huggingface.co/blog/feed.xml
     country: US
-    vertical: tech
+    vertical: ai
     authority: 0.85
     tier: 2
-    tags: [ai, company-blog, global]
+    tags: [ai, tools]
 
-  - name: GitHub Blog
+  - name: Mistral AI Blog
     type: rss
-    url: https://github.blog/feed/
-    country: US
-    vertical: tech
+    url: https://mistral.ai/news/rss.xml
+    country: FR
+    vertical: ai
     authority: 0.85
     tier: 2
-    tags: [tools, company-blog, global]
+    tags: [ai, company-blog]
 
-  - name: Stripe Blog
-    type: rss
-    url: https://stripe.com/blog/feed.rss
-    country: US
-    vertical: tech
-    authority: 0.90
-    tier: 3
-    tags: [fintech, company-blog, global]
-
-  - name: Cloudflare Blog
-    type: rss
-    url: https://blog.cloudflare.com/rss/
-    country: US
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [infrastructure, company-blog, global]
-
-  - name: Netflix Tech Blog
-    type: rss
-    url: https://netflixtechblog.com/feed
-    country: US
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [engineering, company-blog, global]
-
-  - name: Uber Engineering
-    type: rss
-    url: https://www.uber.com/blog/engineering/rss/
-    country: US
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [engineering, company-blog, global]
-
-  # ============================================================
-  # RESEARCH
-  # ============================================================
   - name: arXiv cs.AI
     type: rss
     url: http://export.arxiv.org/rss/cs.AI
     country: GLOBAL
-    vertical: tech
+    vertical: ai
     authority: 0.85
     tier: 2
-    tags: [research, ai, global]
+    tags: [ai, research]
 
   - name: arXiv cs.LG
     type: rss
     url: http://export.arxiv.org/rss/cs.LG
     country: GLOBAL
-    vertical: tech
+    vertical: ai
     authority: 0.85
     tier: 2
-    tags: [research, ml, global]
+    tags: [ai, research]
 
   - name: arXiv cs.CL
     type: rss
     url: http://export.arxiv.org/rss/cs.CL
     country: GLOBAL
-    vertical: tech
+    vertical: ai
     authority: 0.85
     tier: 3
-    tags: [research, nlp, global]
+    tags: [ai, research]
 
   - name: Papers With Code Trending
     type: rss
     url: https://paperswithcode.com/latest/feed.atom
     country: GLOBAL
-    vertical: tech
+    vertical: ai
     authority: 0.75
     tier: 3
-    tags: [research, ml, global]
+    tags: [ai, research]
 
-  # ============================================================
-  # JOB POSTINGS — Greenhouse/Lever (signal of company growth)
-  # Each company's slug is a separate "source"
-  # ============================================================
-  - name: Greenhouse - Razorpay
-    type: json_api
-    url: https://boards-api.greenhouse.io/v1/boards/razorpay/jobs
+  - name: Reddit r/MachineLearning
+    type: api
+    url: https://www.reddit.com/r/MachineLearning/hot.json?limit=50
+    country: US
+    vertical: ai
+    authority: 0.65
+    tier: 2
+    tags: [ai, aggregator]
+
+  - name: Reddit r/LocalLLaMA
+    type: api
+    url: https://www.reddit.com/r/LocalLLaMA/hot.json?limit=50
+    country: US
+    vertical: ai
+    authority: 0.60
+    tier: 2
+    tags: [ai, aggregator]
+
+  - name: Analytics India Magazine
+    type: rss
+    url: https://analyticsindiamag.com/feed/
     country: IN
-    vertical: both
-    authority: 0.60
-    tier: 3
-    tags: [jobs, company, national]
+    vertical: ai
+    authority: 0.70
+    tier: 1
+    tags: [ai, india]
 
-  - name: Greenhouse - Stripe
-    type: json_api
-    url: https://boards-api.greenhouse.io/v1/boards/stripe/jobs
-    country: US
-    vertical: both
-    authority: 0.60
-    tier: 3
-    tags: [jobs, company, global]
-
-  - name: Greenhouse - OpenAI
-    type: json_api
-    url: https://boards-api.greenhouse.io/v1/boards/openai/jobs
-    country: US
-    vertical: both
-    authority: 0.60
-    tier: 3
-    tags: [jobs, company, global]
-
-  - name: Greenhouse - Anthropic
-    type: json_api
-    url: https://boards-api.greenhouse.io/v1/boards/anthropic/jobs
-    country: US
-    vertical: both
-    authority: 0.60
-    tier: 3
-    tags: [jobs, company, global]
-
-  - name: Lever - Netflix
-    type: json_api
-    url: https://api.lever.co/v0/postings/netflix?mode=json
-    country: US
-    vertical: both
-    authority: 0.60
-    tier: 3
-    tags: [jobs, company, global]
-
-  # Add more company slugs as needed — same pattern
+  - name: Google News - AI
+    type: google_news
+    url: https://news.google.com/rss/search?q=artificial+intelligence+OR+LLM+OR+generative+ai&hl=en-IN&gl=IN&ceid=IN:en
+    country: GLOBAL
+    vertical: ai
+    authority: 0.50
+    tier: 1
+    tags: [ai, aggregator]
 
   # ============================================================
-  # PRODUCT LAUNCHES
+  # SOFTWARE — Engineering & Dev Tools
   # ============================================================
+  - name: GitHub Blog
+    type: rss
+    url: https://github.blog/feed/
+    country: US
+    vertical: software
+    authority: 0.90
+    tier: 2
+    tags: [software, tools]
+
+  - name: Stack Overflow Blog
+    type: rss
+    url: https://stackoverflow.blog/feed/
+    country: US
+    vertical: software
+    authority: 0.85
+    tier: 2
+    tags: [software, community]
+
+  - name: Cloudflare Blog
+    type: rss
+    url: https://blog.cloudflare.com/rss/
+    country: US
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, infrastructure]
+
+  - name: Netflix Tech Blog
+    type: rss
+    url: https://netflixtechblog.com/feed
+    country: US
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, engineering]
+
+  - name: Uber Engineering
+    type: rss
+    url: https://www.uber.com/blog/engineering/rss/
+    country: US
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, engineering]
+
+  - name: Stripe Blog
+    type: rss
+    url: https://stripe.com/blog/feed.rss
+    country: US
+    vertical: software
+    authority: 0.90
+    tier: 3
+    tags: [software, fintech]
+
+  - name: InfoQ
+    type: rss
+    url: https://feed.infoq.com/
+    country: US
+    vertical: software
+    authority: 0.80
+    tier: 2
+    tags: [software, engineering]
+
+  - name: dev.to
+    type: rss
+    url: https://dev.to/feed
+    country: US
+    vertical: software
+    authority: 0.60
+    tier: 2
+    tags: [software, community]
+
+  - name: Razorpay Engineering
+    type: rss
+    url: https://engineering.razorpay.com/feed
+    country: IN
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: Zerodha Tech
+    type: rss
+    url: https://zerodha.tech/blog/feed/
+    country: IN
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: Swiggy Bytes
+    type: rss
+    url: https://bytes.swiggy.com/feed
+    country: IN
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: Flipkart Tech
+    type: rss
+    url: https://tech.flipkart.com/feed
+    country: IN
+    vertical: software
+    authority: 0.85
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: PhonePe Engineering
+    type: rss
+    url: https://medium.com/feed/phonepe-engineering
+    country: IN
+    vertical: software
+    authority: 0.80
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: CRED Engineering
+    type: rss
+    url: https://engineering.cred.club/feed
+    country: IN
+    vertical: software
+    authority: 0.80
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: Meesho Tech
+    type: rss
+    url: https://medium.com/feed/meesho-tech
+    country: IN
+    vertical: software
+    authority: 0.75
+    tier: 3
+    tags: [software, india, engineering]
+
+  - name: Reddit r/programming
+    type: api
+    url: https://www.reddit.com/r/programming/hot.json?limit=50
+    country: US
+    vertical: software
+    authority: 0.60
+    tier: 2
+    tags: [software, aggregator]
+
+  - name: Reddit r/developersIndia
+    type: api
+    url: https://www.reddit.com/r/developersIndia/hot.json?limit=50
+    country: IN
+    vertical: software
+    authority: 0.55
+    tier: 2
+    tags: [software, india, aggregator]
+
   - name: Product Hunt Today
     type: rss
     url: https://www.producthunt.com/feed
     country: US
-    vertical: tech
+    vertical: software
     authority: 0.70
     tier: 1
-    tags: [products, global]
+    tags: [software, products]
 
-  - name: GitHub Trending Daily
-    type: scraper
-    url: https://github.com/trending?since=daily
+  # ============================================================
+  # HARDWARE — Chips, Semiconductors, Infrastructure
+  # ============================================================
+  - name: Ars Technica
+    type: rss
+    url: https://arstechnica.com/feed/
+    country: US
+    vertical: hardware
+    authority: 0.85
+    tier: 2
+    tags: [hardware, deep]
+
+  - name: The Register
+    type: rss
+    url: https://www.theregister.com/headlines.atom
+    country: UK
+    vertical: hardware
+    authority: 0.80
+    tier: 2
+    tags: [hardware, industry]
+
+  - name: IEEE Spectrum
+    type: rss
+    url: https://spectrum.ieee.org/feeds/feed.rss
+    country: US
+    vertical: hardware
+    authority: 0.90
+    tier: 2
+    tags: [hardware, research]
+
+  - name: SemiAnalysis
+    type: rss
+    url: https://www.semianalysis.com/feed
+    country: US
+    vertical: hardware
+    authority: 0.90
+    tier: 3
+    tags: [hardware, semiconductors]
+
+  - name: Tom's Hardware
+    type: rss
+    url: https://www.tomshardware.com/feeds/all
+    country: US
+    vertical: hardware
+    authority: 0.80
+    tier: 2
+    tags: [hardware, reviews]
+
+  - name: AnandTech
+    type: rss
+    url: https://www.anandtech.com/rss/
+    country: US
+    vertical: hardware
+    authority: 0.85
+    tier: 3
+    tags: [hardware, deep]
+
+  - name: Google News - Semiconductors
+    type: google_news
+    url: https://news.google.com/rss/search?q=semiconductor+OR+nvidia+chip+OR+GPU+AI&hl=en&gl=US&ceid=US:en
     country: GLOBAL
-    vertical: tech
+    vertical: hardware
+    authority: 0.50
+    tier: 2
+    tags: [hardware, aggregator]
+
+  # ============================================================
+  # INDUSTRY — Tech Business, Funding, Company News
+  # ============================================================
+  - name: TechCrunch
+    type: rss
+    url: https://techcrunch.com/feed/
+    country: US
+    vertical: industry
+    authority: 0.85
+    tier: 1
+    tags: [industry, global]
+
+  - name: The Verge
+    type: rss
+    url: https://www.theverge.com/rss/index.xml
+    country: US
+    vertical: industry
+    authority: 0.85
+    tier: 1
+    tags: [industry, global]
+
+  - name: Wired
+    type: rss
+    url: https://www.wired.com/feed/rss
+    country: US
+    vertical: industry
+    authority: 0.80
+    tier: 2
+    tags: [industry, global]
+
+  - name: MIT Technology Review
+    type: rss
+    url: https://www.technologyreview.com/feed/
+    country: US
+    vertical: industry
+    authority: 0.90
+    tier: 2
+    tags: [industry, research]
+
+  - name: Bloomberg Technology
+    type: rss
+    url: https://feeds.bloomberg.com/technology/news.rss
+    country: US
+    vertical: industry
+    authority: 0.95
+    tier: 1
+    tags: [industry, business]
+
+  - name: Reuters Technology
+    type: rss
+    url: https://www.reutersagency.com/feed/?best-sectors=tech&post_type=best
+    country: US
+    vertical: industry
+    authority: 0.95
+    tier: 2
+    tags: [industry, global]
+
+  - name: YourStory
+    type: rss
+    url: https://yourstory.com/feed
+    country: IN
+    vertical: industry
+    authority: 0.80
+    tier: 1
+    tags: [industry, india, startup]
+
+  - name: Inc42
+    type: rss
+    url: https://inc42.com/feed/
+    country: IN
+    vertical: industry
+    authority: 0.85
+    tier: 1
+    tags: [industry, india, startup]
+
+  - name: Entrackr
+    type: rss
+    url: https://entrackr.com/feed/
+    country: IN
+    vertical: industry
+    authority: 0.80
+    tier: 1
+    tags: [industry, india, startup]
+
+  - name: ET Tech
+    type: rss
+    url: https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms
+    country: IN
+    vertical: industry
+    authority: 0.85
+    tier: 1
+    tags: [industry, india]
+
+  - name: Medianama
+    type: rss
+    url: https://www.medianama.com/feed/
+    country: IN
+    vertical: industry
+    authority: 0.90
+    tier: 1
+    tags: [industry, india, policy]
+
+  - name: Tech in Asia
+    type: rss
+    url: https://www.techinasia.com/feed
+    country: SG
+    vertical: industry
     authority: 0.70
     tier: 2
-    tags: [tools, engineering, global]
-    note: No official RSS; use github-trending-api or scrape with selectolax
+    tags: [industry, asia]
 
-  # ============================================================
-  # FOUNDER / OPERATOR NEWSLETTERS (Substack RSS — all free)
-  # ============================================================
+  - name: Platformer
+    type: rss
+    url: https://www.platformer.news/feed
+    country: US
+    vertical: industry
+    authority: 0.85
+    tier: 3
+    tags: [industry, policy, newsletter]
+
+  - name: Stratechery
+    type: rss
+    url: https://stratechery.com/feed/
+    country: US
+    vertical: industry
+    authority: 0.95
+    tier: 3
+    tags: [industry, analysis, newsletter]
+
   - name: Strictly VC
     type: rss
     url: https://www.strictlyvc.com/feed/
     country: US
-    vertical: both
+    vertical: industry
     authority: 0.80
     tier: 3
-    tags: [funding, newsletter, global]
+    tags: [industry, funding, newsletter]
 
-  - name: Platformer (Casey Newton)
-    type: rss
-    url: https://www.platformer.news/feed
+  - name: Hacker News Top
+    type: api
+    url: https://hacker-news.firebaseio.com/v0/topstories.json
     country: US
-    vertical: tech
-    authority: 0.85
-    tier: 3
-    tags: [tech-policy, newsletter, global]
-
-  - name: Stratechery (free articles)
-    type: rss
-    url: https://stratechery.com/feed/
-    country: US
-    vertical: both
-    authority: 0.95
-    tier: 3
-    tags: [analysis, newsletter, global]
-
-  # Add Indian operator newsletters when you find their Substack URLs
-  # Pattern: https://{name}.substack.com/feed
-
-  # ── Mainstream Indian business press ──────────────────────────────────────
-  - name: Economic Times
-    type: rss
-    url: https://economictimes.indiatimes.com/rssfeedstopstories.cms
-    country: IN
-    vertical: business
-    authority: 0.90
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: ET Markets
-    type: rss
-    url: https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms
-    country: IN
-    vertical: business
-    authority: 0.90
-    tier: 1
-    tags: [markets, business, national]
-
-  - name: ET Industry
-    type: rss
-    url: https://economictimes.indiatimes.com/industry/rssfeeds/13352306.cms
-    country: IN
-    vertical: business
-    authority: 0.85
-    tier: 1
-    tags: [industry, business, national]
-
-  - name: Mint
-    type: rss
-    url: https://www.livemint.com/rss/news
-    country: IN
-    vertical: business
-    authority: 0.90
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: Mint Companies
-    type: rss
-    url: https://www.livemint.com/rss/companies
-    country: IN
-    vertical: business
-    authority: 0.90
-    tier: 1
-    tags: [companies, business, national]
-
-  - name: Business Standard
-    type: rss
-    url: https://www.business-standard.com/rss/latest.rss
-    country: IN
-    vertical: business
-    authority: 0.85
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: Business Standard Companies
-    type: rss
-    url: https://www.business-standard.com/rss/companies-101.rss
-    country: IN
-    vertical: business
-    authority: 0.85
-    tier: 1
-    tags: [companies, business, national]
-
-  - name: MoneyControl Business
-    type: rss
-    url: https://www.moneycontrol.com/rss/business.xml
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: MoneyControl Markets
-    type: rss
-    url: https://www.moneycontrol.com/rss/marketsnews.xml
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 1
-    tags: [markets, business, national]
-
-  - name: Financial Express
-    type: rss
-    url: https://www.financialexpress.com/feed/
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: Hindu Business Line
-    type: rss
-    url: https://www.thehindubusinessline.com/feeder/default.rss
-    country: IN
-    vertical: business
-    authority: 0.85
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: Business Today
-    type: rss
-    url: https://www.businesstoday.in/rssfeeds/?id=home
-    country: IN
-    vertical: business
-    authority: 0.75
-    tier: 2
-    tags: [mainstream, business, national]
-
-  - name: Forbes India
-    type: rss
-    url: https://www.forbesindia.com/rssfeeds/rss_all.xml
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 2
-    tags: [mainstream, business, national]
-
-  - name: Fortune India
-    type: rss
-    url: https://www.fortuneindia.com/rss.xml
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 2
-    tags: [mainstream, business, national]
-
-  - name: Outlook Business
-    type: rss
-    url: https://business.outlookindia.com/rss
-    country: IN
-    vertical: business
-    authority: 0.75
-    tier: 2
-    tags: [mainstream, business, national]
-
-  - name: BloombergQuint / BQ Prime
-    type: rss
-    url: https://www.bqprime.com/feed
-    country: IN
-    vertical: business
-    authority: 0.90
-    tier: 1
-    tags: [mainstream, business, national]
-
-  - name: CNBC TV18
-    type: rss
-    url: https://www.cnbctv18.com/commonfeeds/v1/cne/rss/business.xml
-    country: IN
-    vertical: business
-    authority: 0.85
-    tier: 1
-    tags: [mainstream, business, national]
-
-  # ── BFSI ──────────────────────────────────────────────────────────────────
-  - name: ET BFSI
-    type: rss
-    url: https://bfsi.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.85
-    tier: 1
-    tags: [bfsi, sector, national]
-
-  - name: Banking Frontiers
-    type: rss
-    url: https://bankingfrontiers.com/feed/
-    country: IN
-    vertical: business
-    authority: 0.65
-    tier: 2
-    tags: [banking, sector, national]
-
-  - name: Outlook Money
-    type: rss
-    url: https://www.outlookmoney.com/rss
-    country: IN
-    vertical: business
+    vertical: industry
     authority: 0.70
-    tier: 3
-    tags: [bfsi, sector, national]
-
-  # ── Marketing / FMCG ──────────────────────────────────────────────────────
-  - name: ET Brand Equity
-    type: rss
-    url: https://brandequity.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.85
     tier: 1
-    tags: [marketing, advertising, sector, national]
+    tags: [aggregator]
 
-  - name: afaqs
-    type: rss
-    url: https://www.afaqs.com/rss/all
-    country: IN
-    vertical: business
-    authority: 0.75
-    tier: 2
-    tags: [marketing, advertising, national]
-
-  - name: exchange4media
-    type: rss
-    url: https://www.exchange4media.com/rss.xml
-    country: IN
-    vertical: business
+  - name: Hacker News Best
+    type: api
+    url: https://hacker-news.firebaseio.com/v0/beststories.json
+    country: US
+    vertical: industry
     authority: 0.70
     tier: 2
-    tags: [marketing, advertising, national]
+    tags: [aggregator]
 
-  - name: ET Retail
-    type: rss
-    url: https://retail.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.80
+  - name: HN Algolia (high-score filter)
+    type: api
+    url: https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points>100
+    country: US
+    vertical: industry
+    authority: 0.70
     tier: 2
-    tags: [retail, fmcg, sector, national]
+    tags: [aggregator]
 
-  # ── HR / leadership ───────────────────────────────────────────────────────
+  - name: Reddit r/IndianStartups
+    type: api
+    url: https://www.reddit.com/r/IndianStartups/hot.json?limit=50
+    country: IN
+    vertical: industry
+    authority: 0.55
+    tier: 1
+    tags: [industry, india, aggregator]
+
+  - name: Google News - India Tech
+    type: google_news
+    url: https://news.google.com/rss/search?q=india+technology&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    vertical: industry
+    authority: 0.50
+    tier: 1
+    tags: [industry, india, aggregator]
+
+  - name: Google News - Indian Startups
+    type: google_news
+    url: https://news.google.com/rss/search?q=indian+startup+funding&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    vertical: industry
+    authority: 0.50
+    tier: 1
+    tags: [industry, india, aggregator]
+
+  - name: Google News - Technology Section IN
+    type: google_news
+    url: https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    vertical: industry
+    authority: 0.50
+    tier: 1
+    tags: [industry, india, aggregator]
+
+  # ============================================================
+  # HIRING — Job Market, Workforce, Layoffs
+  # ============================================================
   - name: ET HRWorld
     type: rss
     url: https://hr.economictimes.indiatimes.com/rss/topstories
     country: IN
-    vertical: business
+    vertical: hiring
     authority: 0.85
     tier: 1
-    tags: [hr, leadership, sector, national]
+    tags: [hiring, india, hr]
 
   - name: People Matters
     type: rss
     url: https://www.peoplematters.in/rss/news
     country: IN
-    vertical: business
+    vertical: hiring
     authority: 0.75
     tier: 2
-    tags: [hr, leadership, national]
+    tags: [hiring, india, hr]
 
   - name: SHRM India
     type: rss
     url: https://www.shrm.org/in/rss/news
     country: IN
-    vertical: business
+    vertical: hiring
     authority: 0.70
     tier: 3
-    tags: [hr, leadership, national]
-
-  # ── Consulting / strategy ─────────────────────────────────────────────────
-  - name: McKinsey Insights
-    type: rss
-    url: https://www.mckinsey.com/insights/rss
-    country: GLOBAL
-    vertical: business
-    authority: 0.95
-    tier: 2
-    tags: [consulting, strategy, global]
-
-  - name: BCG Insights
-    type: rss
-    url: https://www.bcg.com/feed.aspx
-    country: GLOBAL
-    vertical: business
-    authority: 0.95
-    tier: 3
-    tags: [consulting, strategy, global]
-
-  - name: Bain Insights
-    type: rss
-    url: https://www.bain.com/insights/rss/
-    country: GLOBAL
-    vertical: business
-    authority: 0.90
-    tier: 3
-    tags: [consulting, strategy, global]
-
-  - name: HBR
-    type: rss
-    url: https://hbr.org/feed
-    country: US
-    vertical: business
-    authority: 0.95
-    tier: 2
-    tags: [leadership, strategy, global]
-
-  # ── Manufacturing / infra / energy ────────────────────────────────────────
-  - name: ET Auto
-    type: rss
-    url: https://auto.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 2
-    tags: [auto, manufacturing, sector, national]
-
-  - name: ET Energy
-    type: rss
-    url: https://energy.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 2
-    tags: [energy, sector, national]
-
-  - name: ET Infra
-    type: rss
-    url: https://infra.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 2
-    tags: [infrastructure, sector, national]
-
-  - name: ET Real Estate
-    type: rss
-    url: https://realty.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.75
-    tier: 3
-    tags: [real-estate, sector, national]
-
-  - name: ET Health
-    type: rss
-    url: https://health.economictimes.indiatimes.com/rss/topstories
-    country: IN
-    vertical: business
-    authority: 0.80
-    tier: 2
-    tags: [healthcare, pharma, sector, national]
-
-  - name: Pharmabiz
-    type: rss
-    url: https://www.pharmabiz.com/rss.xml
-    country: IN
-    vertical: business
-    authority: 0.65
-    tier: 3
-    tags: [pharma, sector, national]
-
-  # ── Macro / policy ────────────────────────────────────────────────────────
-  - name: RBI Press Releases
-    type: rss
-    url: https://www.rbi.org.in/Scripts/RSSEnglish.aspx
-    country: IN
-    vertical: business
-    authority: 1.00
-    tier: 1
-    tags: [policy, regulator, national]
-
-  - name: SEBI Press Releases
-    type: scraper
-    url: https://www.sebi.gov.in/sebiweb/home/list/1/1/0/0/Press-Releases
-    country: IN
-    vertical: business
-    authority: 1.00
-    tier: 2
-    tags: [policy, regulator, national]
-    note: No RSS — scrape the press release listing page
-
-  - name: PIB India Releases
-    type: rss
-    url: https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3
-    country: IN
-    vertical: business
-    authority: 0.90
-    tier: 2
-    tags: [policy, government, national]
-
-  # ── Google News business queries ──────────────────────────────────────────
-  - name: Google News - India Business
-    type: google_news
-    url: https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: business
-    authority: 0.50
-    tier: 1
-    tags: [aggregator, business, national]
-
-  - name: Google News - India M&A
-    type: google_news
-    url: https://news.google.com/rss/search?q=india+acquisition+OR+merger&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: business
-    authority: 0.50
-    tier: 1
-    tags: [aggregator, m-and-a, national]
+    tags: [hiring, india, hr]
 
   - name: Google News - India CEO Changes
     type: google_news
     url: https://news.google.com/rss/search?q=india+CEO+appointed+OR+resigns+OR+steps+down&hl=en-IN&gl=IN&ceid=IN:en
     country: IN
-    vertical: business
+    vertical: hiring
     authority: 0.50
     tier: 2
-    tags: [aggregator, leadership, national]
+    tags: [hiring, india, aggregator]
 
-  - name: Google News - India IPO (Business)
+  - name: Google News - Tech Layoffs
     type: google_news
-    url: https://news.google.com/rss/search?q=india+IPO+OR+listing&hl=en-IN&gl=IN&ceid=IN:en
-    country: IN
-    vertical: business
+    url: https://news.google.com/rss/search?q=tech+layoffs+OR+job+cuts+OR+workforce+reduction&hl=en&gl=US&ceid=US:en
+    country: GLOBAL
+    vertical: hiring
     authority: 0.50
     tier: 2
-    tags: [aggregator, ipo, national]
+    tags: [hiring, aggregator]
 
-  - name: Google News - India Economy
-    type: google_news
-    url: https://news.google.com/rss/search?q=india+economy+OR+GDP+OR+inflation&hl=en-IN&gl=IN&ceid=IN:en
+  - name: Greenhouse - Razorpay
+    type: json_api
+    url: https://boards-api.greenhouse.io/v1/boards/razorpay/jobs
     country: IN
-    vertical: business
-    authority: 0.50
-    tier: 2
-    tags: [aggregator, macro, national]
+    vertical: hiring
+    authority: 0.60
+    tier: 3
+    tags: [hiring, india, jobs]
 
-  # ── International business ────────────────────────────────────────────────
-  - name: Bloomberg Markets
-    type: rss
-    url: https://feeds.bloomberg.com/markets/news.rss
+  - name: Greenhouse - OpenAI
+    type: json_api
+    url: https://boards-api.greenhouse.io/v1/boards/openai/jobs
     country: US
-    vertical: business
-    authority: 0.95
-    tier: 1
-    tags: [markets, global]
+    vertical: hiring
+    authority: 0.60
+    tier: 3
+    tags: [hiring, jobs]
 
-  - name: Reuters Business
-    type: rss
-    url: https://www.reutersagency.com/feed/?best-sectors=business-finance&post_type=best
+  - name: Greenhouse - Anthropic
+    type: json_api
+    url: https://boards-api.greenhouse.io/v1/boards/anthropic/jobs
     country: US
-    vertical: business
-    authority: 0.95
-    tier: 1
-    tags: [business, global]
+    vertical: hiring
+    authority: 0.60
+    tier: 3
+    tags: [hiring, jobs]
 
-  - name: FT (free articles)
-    type: rss
-    url: https://www.ft.com/rss/home
-    country: UK
-    vertical: business
-    authority: 0.95
-    tier: 2
-    tags: [business, global]
-
-  - name: WSJ Business
-    type: rss
-    url: https://feeds.a.dj.com/rss/RSSWorldNews.xml
+  - name: Greenhouse - Stripe
+    type: json_api
+    url: https://boards-api.greenhouse.io/v1/boards/stripe/jobs
     country: US
-    vertical: business
-    authority: 0.95
-    tier: 2
-    tags: [business, global]
+    vertical: hiring
+    authority: 0.60
+    tier: 3
+    tags: [hiring, jobs]
+
+  - name: Lever - Netflix
+    type: json_api
+    url: https://api.lever.co/v0/postings/netflix?mode=json
+    country: US
+    vertical: hiring
+    authority: 0.60
+    tier: 3
+    tags: [hiring, jobs]

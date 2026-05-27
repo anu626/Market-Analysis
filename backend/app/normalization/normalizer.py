@@ -21,6 +21,8 @@ TRACKING_PARAM_EXACT = {
     "campaign_id",
 }
 
+from app.classification.classifier import classify
+
 WHITESPACE_RE = re.compile(r"\s+")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 SUMMARY_MAX_CHARS = 320
@@ -87,6 +89,11 @@ def normalize_item(raw: dict) -> dict | None:
     if not title or not url:
         return None
 
+    summary = clean_summary(raw.get("summary"))
+    # Source-level vertical is the starting point; classifier refines per-article
+    source_vertical = raw.get("vertical") or ""
+    vertical = classify(title, summary) if source_vertical not in ("ai", "software", "hardware", "hiring") else source_vertical
+
     return {
         "title": title,
         "url": url,
@@ -94,6 +101,6 @@ def normalize_item(raw: dict) -> dict | None:
         "score": int(raw.get("score") or 0),
         "external_id": str(raw.get("external_id")) if raw.get("external_id") else None,
         "published_at": to_utc(raw.get("published_at")),
-        "summary": clean_summary(raw.get("summary")),
-        "vertical": raw.get("vertical", "tech"),
+        "summary": summary,
+        "vertical": vertical,
     }

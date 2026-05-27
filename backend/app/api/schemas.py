@@ -13,7 +13,8 @@ class ArticleOut(BaseModel):
     published_at: datetime | None = None
     created_at: datetime
     rank_score: float
-    vertical: str = "tech"
+    vertical: str = "industry"
+    is_highlighted: bool = False
     source_count: int = 1
 
     class Config:

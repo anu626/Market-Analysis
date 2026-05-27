@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Float,
@@ -41,7 +42,8 @@ class Article(Base):
     rank_score = Column(Float, default=0.0, nullable=False, index=True)
     story_hash = Column(String(12), nullable=True, index=True)
     external_id = Column(String(64), nullable=True, index=True)
-    vertical = Column(String(16), nullable=False, default='tech', index=True)
+    vertical = Column(String(16), nullable=False, default='industry', index=True)
+    is_highlighted = Column(Boolean, default=False, nullable=False, index=True)
 
     source = relationship("Source", back_populates="articles")
 

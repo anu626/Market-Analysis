@@ -16,13 +16,13 @@ from app.ingestion.reddit_fetcher import fetch_reddit
 from app.ingestion.rss_fetcher import fetch_rss
 from app.models import Article, IngestionLog, Source
 from app.normalization.normalizer import normalize_item
-from app.ranking.ranker import compute_rank, recompute_all, story_hash
+from app.ranking.ranker import compute_rank, recompute_all, story_hash, _should_highlight
 from app.services.cache import cache_delete_prefix
 
 logger = logging.getLogger(__name__)
 
 
-def _ensure_source(db: Session, name: str, type_: str, vertical: str = "tech") -> Source:
+def _ensure_source(db: Session, name: str, type_: str, vertical: str = "industry") -> Source:
     src = db.query(Source).filter(Source.name == name).first()
     if src:
         if src.vertical != vertical:
@@ -54,7 +54,7 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                 continue
             seen_urls.add(url)
 
-            vertical = item.get("vertical", "tech")
+            vertical = item.get("vertical", "industry")
             src = _ensure_source(db, item["source_name"], source_type, vertical)
 
             existing = find_duplicate(db, url=url, title=item["title"])
@@ -64,7 +64,7 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                         existing.score,
                         existing.created_at,
                         source_name=existing.source_name or "",
-                        title=existing.title or "",
+                        vertical=existing.vertical or "industry",
                         published_at=existing.published_at,
                     )
                 duplicates += 1
@@ -73,6 +73,13 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
             now = datetime.utcnow()
             title = item["title"]
             source_name = item["source_name"]
+            rank = compute_rank(
+                item["score"],
+                now,
+                source_name=source_name,
+                vertical=vertical,
+                published_at=item.get("published_at"),
+            )
             article = Article(
                 title=title,
                 url=item["url"],
@@ -84,14 +91,9 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                 created_at=now,
                 external_id=item.get("external_id"),
                 story_hash=story_hash(title),
-                rank_score=compute_rank(
-                    item["score"],
-                    now,
-                    source_name=source_name,
-                    title=title,
-                    published_at=item.get("published_at"),
-                ),
+                rank_score=rank,
                 vertical=vertical,
+                is_highlighted=_should_highlight(vertical, rank),
             )
             db.add(article)
             inserted += 1
