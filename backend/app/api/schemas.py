@@ -15,6 +15,8 @@ class ArticleOut(BaseModel):
     rank_score: float
     vertical: str = "tech"
     source_count: int = 1
+    ai_title: str | None = None
+    ai_summary: str | None = None
 
     class Config:
         from_attributes = True

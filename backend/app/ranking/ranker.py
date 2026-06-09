@@ -1,19 +1,21 @@
 """Multi-signal ranking.
 
 Weights:
-  source_count    25%  — how many distinct outlets covered the story
-  velocity        20%  — how fast the story is spreading (articles in last 4h)
-  locale_score    20%  — Indian source + Indian entity mentions in title
-  engagement      15%  — HN points / Reddit upvotes (log-normalised)
-  recency         10%  — freshness with 12-hour half-life decay
-  source_authority 10% — publisher credibility from sources.yaml
+  recency          30%  — freshness with 6-hour half-life decay
+  velocity         20%  — how fast the story is spreading (articles in last 4h)
+  source_count     20%  — how many distinct outlets covered the story
+  topic_relevance  20%  — how well the article fits the platform's focus (ai/software/hardware)
+  source_authority 10%  — publisher credibility from sources.yaml
+
+Engagement (HN points / Reddit upvotes) was removed: RSS and JSON API sources
+hardcode score=0, so the signal only disadvantages non-HN/Reddit content unfairly.
 """
 
 import hashlib
 import math
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -70,10 +72,6 @@ def story_hash(title: str) -> str:
 # Individual signal functions — each returns a float in [0, 1]
 # ---------------------------------------------------------------------------
 
-def _engagement_signal(score: int) -> float:
-    return min(math.log1p(max(score, 0)) / math.log1p(500), 1.0)
-
-
 def _recency_signal(created_at: datetime, now: datetime) -> float:
     age_hours = max(0.0, (now - created_at).total_seconds() / 3600.0)
     return math.exp(-age_hours / 12.0)  # 12-hour half-life
@@ -99,7 +97,6 @@ def _velocity_signal(recent_count: int) -> float:
 # ---------------------------------------------------------------------------
 
 def compute_rank(
-    score: int,
     created_at: datetime,
     source_name: str = "",
     title: str = "",
@@ -108,11 +105,10 @@ def compute_rank(
     now: datetime | None = None,
     published_at: datetime | None = None,
 ) -> float:
-    now = now or datetime.utcnow()
-    
-    authority_map, indian_sources = _load_source_config()
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
 
-    engagement = _engagement_signal(score)
+    authority_map = _load_source_config()
+
     # Use published_at for age so newly-ingested old articles don't score as fresh
     age_ref = published_at if published_at and published_at < created_at else created_at
     recency = _recency_signal(age_ref, now)
@@ -122,18 +118,17 @@ def compute_rank(
     velocity = _velocity_signal(velocity_count)
 
     return (
-        0.25 * src_count
+        0.30 * recency
         + 0.20 * velocity
-        + 0.20 * locale
-        + 0.15 * engagement
-        + 0.10 * recency
+        + 0.20 * src_count
+        + 0.20 * topic
         + 0.10 * authority
     )
 
 
 def recompute_all(db: Session) -> int:
     """Batch-recompute rank_score for every article using full story-level stats."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     recent_cutoff = now - timedelta(hours=4)
     articles = db.query(Article).all()
 
@@ -149,7 +144,6 @@ def recompute_all(db: Session) -> int:
         h = a.story_hash or story_hash(a.title)
         stats = by_hash[h]
         a.rank_score = compute_rank(
-            score=a.score or 0,
             created_at=a.created_at,
             source_name=a.source_name or "",
             title=a.title or "",
@@ -161,3 +155,8 @@ def recompute_all(db: Session) -> int:
 
     db.commit()
     return len(articles)
+
+
+def _should_highlight(vertical: str, rank_score: float) -> bool:
+    """True for high-ranking articles in the platform's core verticals."""
+    return vertical in ("ai", "software", "hardware", "hiring") and rank_score >= 0.50

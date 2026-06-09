@@ -13,3 +13,5 @@ python-dotenv==1.0.1
 pydantic-settings==2.2.1
 cryptography==42.0.7
 pyyaml==6.0.2
+google-cloud-aiplatform>=1.60.0
+trafilatura==2.0.0

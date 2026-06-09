@@ -80,25 +80,54 @@ const setStatus = (text, kind = "") => {
   }
 };
 
+// --- Tag config: maps vertical + source signals → display tag ---
+// Priority: source-based (YouTube/GitHub) > vertical override > vertical fallback
+const TAG_CONFIG = {
+  layoffs:     { label: "Layoffs",          icon: "📉", cls: "layoffs"  },
+  hiring:      { label: "Hiring",           icon: "💼", cls: "hiring"   },
+  funding:     { label: "Funding",          icon: "💰", cls: "funding"  },
+  ai:          { label: "AI",               icon: "✦",  cls: "ai"       },
+  skills_tools:{ label: "Skills & Tools",   icon: "🛠", cls: "skills"   },
+  software:    { label: "Dev",              icon: "💻", cls: "software" },
+  hardware:    { label: "Hardware",         icon: "⚡", cls: "hardware" },
+  industry:    { label: "Industry",         icon: "📊", cls: "industry" },
+  youtube:     { label: "YouTube",          icon: "▶",  cls: "youtube"  },
+  github:      { label: "GitHub Trending",  icon: "⭐", cls: "github"   },
+};
+
+function resolveTag(a) {
+  const src = (a.source_name || "").toLowerCase();
+  if (src.includes("youtube"))              return TAG_CONFIG.youtube;
+  if (src.includes("github") || src.includes("trending")) return TAG_CONFIG.github;
+  return TAG_CONFIG[a.vertical] ?? null;
+}
+
 // --- Rendering ---
 function renderArticleHtml(a, idx) {
   const domain = domainOf(a.url);
-  const title = escapeHtml(a.title);
-  const summary = a.summary ? escapeHtml(a.summary) : "";
+  const displayTitle = escapeHtml(a.ai_title || a.title);
+  const displaySummary = a.ai_summary || a.summary;
+  const aiEnriched = !!a.ai_title;
   const when = timeAgo(a.published_at || a.created_at);
   const rank = (a.rank_score ?? 0).toFixed(2);
   const rankClass = idx < 3 ? "top" : "";
+  const highlightedClass = a.is_highlighted ? " article--highlighted" : "";
+  const tag = resolveTag(a);
+  const tagHtml = tag
+    ? `<span class="meta-item"><span class="tag tag--${tag.cls}">${tag.icon} ${tag.label}</span></span>`
+    : "";
   return `
     <li class="article" data-id="${a.id}">
       <div class="article-rank ${rankClass}">${idx + 1}</div>
       <div class="article-body">
         <div class="article-title">
-          ${title}${domain ? `<span class="article-domain">${escapeHtml(domain)}</span>` : ""}
+          ${a.is_highlighted ? `<span class="featured-badge">Featured</span>` : ""}
+          ${displayTitle}${domain ? `<span class="article-domain">${escapeHtml(domain)}</span>` : ""}
         </div>
-        ${summary ? `<p class="article-summary">${summary}</p>` : ""}
+        ${displaySummary ? `<p class="article-summary">${escapeHtml(displaySummary)}${aiEnriched ? `<span class="ai-badge" title="AI-enhanced">✦</span>` : ""}</p>` : ""}
         <div class="article-meta">
-          ${a.score > 0 ? `<span class="meta-item score-up">▲ ${a.score} points</span>` : ""}
           <span class="meta-item"><span class="source-pill">${escapeHtml(a.source_name)}</span></span>
+          ${tagHtml}
           ${(a.source_count ?? 1) > 1 ? `<span class="meta-item source-count">+${a.source_count - 1} more source${a.source_count > 2 ? "s" : ""}</span>` : ""}
           <span class="meta-item">⏱ ${when}</span>
           <span class="meta-item rank-score">rank ${rank}</span>
@@ -245,8 +274,8 @@ async function triggerIngest() {
 function openModal(id) {
   const a = state.byId.get(id);
   if (!a) return;
-  $("#modal-title").textContent = a.title;
-  $("#modal-summary").textContent = a.summary || "";
+  $("#modal-title").textContent = a.ai_title || a.title;
+  $("#modal-summary").textContent = a.ai_summary || a.summary || "";
   $("#modal-source").textContent = a.source_name;
   $("#modal-source-2").textContent = a.source_name;
   $("#modal-domain").textContent = domainOf(a.url);

@@ -5,6 +5,7 @@ to keep the dependency footprint small.
 """
 
 import logging
+import re
 from datetime import datetime, timedelta
 
 from rapidfuzz import fuzz
@@ -19,7 +20,15 @@ RECENT_WINDOW_DAYS = 7
 
 
 def _normalize_title_for_compare(title: str) -> str:
-    return " ".join(title.lower().split())
+    t = title.lower()
+    t = re.sub(r"[^a-z0-9 ]", " ", t)
+    # unify money phrasing so "$200m" and "usd 200 million" hash identically
+    t = re.sub(r"\b(usd|us|rs|inr)\b", "", t)
+    t = re.sub(r"\bmillion\b", "m", t)
+    t = re.sub(r"\bbillion\b", "b", t)
+    t = re.sub(r"\bcrore\b", "cr", t)
+    t = re.sub(r"(\d+)\s+(m|b|cr)\b", r"\1\2", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def find_duplicate(db: Session, *, url: str, title: str) -> Article | None:

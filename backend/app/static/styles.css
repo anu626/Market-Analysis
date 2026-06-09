@@ -564,6 +564,73 @@ input, button { font-family: inherit; }
   font-weight: 600;
 }
 
+/* ========== Highlighted articles ========== */
+.article--highlighted {
+  /* inset box-shadow avoids touching the box model (no grid layout shift) */
+  box-shadow: inset 4px 0 0 #f59e0b;
+  background: #1e1800;   /* dark mode: warm dark amber */
+}
+@media (prefers-color-scheme: light) {
+  .article--highlighted {
+    background: #fffbeb; /* light mode: warm cream */
+  }
+}
+.featured-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+}
+
+/* ========== Feed category tags ========== */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 2px 7px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+/* dark-mode defaults */
+.tag--hiring   { color: #f472b6; background: #2a0a1a; border-color: #5a1535; }
+.tag--layoffs  { color: #f87171; background: #2a0808; border-color: #5a1515; }
+.tag--funding  { color: #34d399; background: #072018; border-color: #0f4030; }
+.tag--ai       { color: #a78bfa; background: #1e1030; border-color: #3d1f6e; }
+.tag--skills   { color: #22d3ee; background: #061a20; border-color: #0d3540; }
+.tag--software { color: #6ee7b7; background: #0a2018; border-color: #0f3a28; }
+.tag--hardware { color: #60a5fa; background: #0a1a30; border-color: #0f2d50; }
+.tag--industry { color: #9ba2b1; background: #1a1d25; border-color: #2a2f3d; }
+.tag--youtube  { color: #f87171; background: #2a0808; border-color: #5a1515; }
+.tag--github   { color: #93c5fd; background: #091525; border-color: #1a3050; }
+
+/* light-mode overrides */
+@media (prefers-color-scheme: light) {
+  .tag--hiring   { color: #be185d; background: #fdf2f8; border-color: #fbcfe8; }
+  .tag--layoffs  { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+  .tag--funding  { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
+  .tag--ai       { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
+  .tag--skills   { color: #0e7490; background: #ecfeff; border-color: #a5f3fc; }
+  .tag--software { color: #047857; background: #f0fdf4; border-color: #bbf7d0; }
+  .tag--hardware { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+  .tag--industry { color: #374151; background: #f9fafb; border-color: #e5e7eb; }
+  .tag--youtube  { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+  .tag--github   { color: #1e40af; background: #eff6ff; border-color: #bfdbfe; }
+}
+
 /* ========== Footer ========== */
 .app-footer {
   margin-top: 60px;
@@ -576,6 +643,17 @@ input, button { font-family: inherit; }
 .app-footer .dot { margin: 0 8px; }
 .app-footer a { color: var(--accent); }
 .app-footer a:hover { color: var(--accent-strong); }
+
+/* ========== AI enrichment badge ========== */
+.ai-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--accent);
+  opacity: 0.7;
+  vertical-align: middle;
+  cursor: default;
+}
 
 /* ========== Responsive ========== */
 @media (max-width: 720px) {

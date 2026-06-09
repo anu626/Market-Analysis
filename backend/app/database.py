@@ -41,3 +41,15 @@ def _migrate(eng):
         if "story_hash" not in existing:
             conn.execute(text("ALTER TABLE articles ADD COLUMN story_hash VARCHAR(12)"))
             conn.commit()
+        if "is_highlighted" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN is_highlighted BOOLEAN NOT NULL DEFAULT 0"))
+            conn.commit()
+        if "ai_title" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN ai_title VARCHAR(512)"))
+            conn.commit()
+        if "ai_summary" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN ai_summary TEXT"))
+            conn.commit()
+        if "ai_enriched_at" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN ai_enriched_at DATETIME"))
+            conn.commit()
