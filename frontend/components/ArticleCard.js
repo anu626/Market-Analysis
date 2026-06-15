@@ -50,6 +50,15 @@ export default function ArticleCard({ article, index }) {
         </div>
       )}
       <div className="article-meta">
+        {article.vertical && (
+          <span style={{
+            display: "inline-block", padding: "2px 8px", borderRadius: 4,
+            backgroundColor: "#1a1a2e", color: "#e2a84b", fontSize: 11,
+            fontWeight: 600, marginRight: 8, letterSpacing: 0.3,
+          }}>
+            {article.vertical}
+          </span>
+        )}
         <span className="source">{article.source_name}</span>
         <span style={{ marginLeft: 6 }}>{timeAgo(article.published_at || article.created_at)}</span>
         <span style={{ marginLeft: 6, color: "#aaa" }}>rank {article.rank_score?.toFixed(2)}</span>

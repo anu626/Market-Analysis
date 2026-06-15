@@ -1,0 +1,1177 @@
+# =====================================================
+# NEWS FEED SOURCES — merged & de-duplicated
+# Schema: name, type, url, country, category, authority, tier
+# tier 1 = fetch every 30 min | tier 2 = every 2 hr | tier 3 = every 6 hr
+# enabled: false — skip during ingestion (needs work / channel id RESOLVE)
+# =====================================================
+
+sources:
+
+  # ---------------------------------------------------
+  # 1. HIRING
+  # ---------------------------------------------------
+  - name: ET HRWorld
+    type: rss
+    url: https://hr.economictimes.indiatimes.com/rss/topstories
+    country: IN
+    category: hiring
+    authority: 0.85
+    tier: 1
+  - name: Indeed Hiring Lab
+    type: rss
+    url: https://www.hiringlab.org/feed/
+    country: US
+    category: hiring
+    authority: 0.85
+    tier: 2
+  - name: HR Dive
+    type: rss
+    url: https://www.hrdive.com/feeds/news/
+    country: US
+    category: hiring
+    authority: 0.8
+    tier: 3
+  - name: TrueUp Job Market Pulse
+    type: rss
+    url: https://www.trueup.io/blog/feed.xml
+    country: GLOBAL
+    category: hiring
+    authority: 0.85
+    tier: 1
+    enabled: false  # blocks all bots with HTTP 403
+  - name: Google News - Tech Hiring India
+    type: google_news
+    url: https://news.google.com/rss/search?q=tech+hiring+india+OR+%22mass+hiring%22+OR+%22recruitment+drive%22+site:economictimes.indiatimes.com+OR+site:moneycontrol.com&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: hiring
+    authority: 0.6
+    tier: 2
+  - name: Google News - Salary Hike India
+    type: google_news
+    url: https://news.google.com/rss/search?q=salary+hike+OR+appraisal+OR+increment+india+IT&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: hiring
+    authority: 0.5
+    tier: 2
+  - name: Google News - Campus Placements India
+    type: google_news
+    url: https://news.google.com/rss/search?q=campus+placement+2025+OR+iit+placement+OR+nit+placement+india&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: hiring
+    authority: 0.5
+    tier: 2
+  - name: Google News - Return to Office
+    type: google_news
+    url: https://news.google.com/rss/search?q=return+to+office+OR+hybrid+work+policy+tech&hl=en&gl=US&ceid=US:en
+    country: GLOBAL
+    category: hiring
+    authority: 0.5
+    tier: 3
+
+  # ---------------------------------------------------
+  # 2. LAYOFFS
+  # ---------------------------------------------------
+  - name: Bloomberg Technology
+    type: rss
+    url: https://feeds.bloomberg.com/technology/news.rss
+    country: US
+    category: layoffs
+    authority: 0.95
+    tier: 1
+  - name: TechCrunch - Layoffs
+    type: rss
+    url: https://techcrunch.com/tag/layoffs/feed/
+    country: US
+    category: layoffs
+    authority: 0.85
+    tier: 1
+  - name: TrueUp Layoff Tracker
+    type: json_api
+    url: https://www.trueup.io/api/layoffs
+    country: GLOBAL
+    category: layoffs
+    authority: 0.9
+    tier: 1
+    enabled: false  # blocks all bots with HTTP 403
+  - name: layoffs.fyi
+    type: scraper
+    url: https://layoffs.fyi
+    country: GLOBAL
+    vertical: Layoffs
+    category: layoffs
+    authority: 0.95
+    tier: 1
+    tags: [layoffs, global, airtable]
+  - name: Livemint - Companies
+    type: rss
+    url: https://www.livemint.com/rss/companies
+    country: IN
+    category: layoffs
+    authority: 0.8
+    tier: 2
+  - name: Moneycontrol - Technology
+    type: rss
+    url: https://www.moneycontrol.com/rss/technology.xml
+    country: IN
+    category: layoffs
+    authority: 0.85
+    tier: 2
+    enabled: false  # VERIFY path — Moneycontrol RSS URLs vary
+  - name: Google News - Layoffs India
+    type: google_news
+    url: https://news.google.com/rss/search?q=%22layoffs%22+AND+(%22india%22+OR+%22bengaluru%22+OR+%22gurugram%22)+tech+-filetype:pdf&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: layoffs
+    authority: 0.6
+    tier: 1
+  - name: Reddit r/layoffs
+    type: api
+    url: https://www.reddit.com/r/layoffs/hot.json?limit=50
+    country: GLOBAL
+    category: layoffs
+    authority: 0.5
+    tier: 3
+    enabled: false  # community rumor signal lane only
+  - name: Google News - Tech Layoffs Global
+    type: google_news
+    url: https://news.google.com/rss/search?q=tech+layoffs+OR+job+cuts+OR+workforce+reduction&hl=en&gl=US&ceid=US:en
+    country: GLOBAL
+    category: layoffs
+    authority: 0.5
+    tier: 1
+  - name: Google News - Big Tech Reorg
+    type: google_news
+    url: https://news.google.com/rss/search?q=google+OR+microsoft+OR+amazon+OR+meta+layoffs+OR+reorg+2025&hl=en&gl=US&ceid=US:en
+    country: GLOBAL
+    category: layoffs
+    authority: 0.55
+    tier: 1
+
+  # ---------------------------------------------------
+  # 3. FUNDING (= future hiring signal)
+  # ---------------------------------------------------
+  - name: Inc42
+    type: rss
+    url: https://inc42.com/feed/
+    country: IN
+    category: funding
+    authority: 0.85
+    tier: 1
+  - name: Entrackr
+    type: rss
+    url: https://entrackr.com/rss
+    country: IN
+    category: funding
+    authority: 0.8
+    tier: 1
+  - name: YourStory
+    type: rss
+    url: https://yourstory.com/feed
+    country: IN
+    category: funding
+    authority: 0.8
+    tier: 2
+  - name: VCCircle - Startups
+    type: rss
+    url: https://www.vccircle.com/rss/12
+    country: IN
+    category: funding
+    authority: 0.9
+    tier: 1
+    enabled: false  # RSS returns HTML; feed broken
+  - name: Crunchbase News
+    type: rss
+    url: https://news.crunchbase.com/feed/
+    country: US
+    category: funding
+    authority: 0.85
+    tier: 2
+  - name: TechCrunch - Venture
+    type: rss
+    url: https://techcrunch.com/category/venture/feed/
+    country: US
+    category: funding
+    authority: 0.85
+    tier: 2
+  - name: Google News - Indian Startup Funding
+    type: google_news
+    url: https://news.google.com/rss/search?q=indian+startup+raises+funding+OR+series+a+OR+series+b&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: funding
+    authority: 0.5
+    tier: 1
+  - name: Tech in Asia
+    type: rss
+    url: https://feeds.feedburner.com/techinasia
+    country: SG
+    category: funding
+    authority: 0.75
+    tier: 2
+  - name: The Ken India
+    type: rss
+    url: https://the-ken.com/feed/
+    country: IN
+    category: funding
+    authority: 0.85
+    tier: 2
+  - name: Google News - Global VC Funding
+    type: google_news
+    url: https://news.google.com/rss/search?q=startup+raises+million+OR+funding+round+OR+series+a+b+c&hl=en&gl=US&ceid=US:en
+    country: GLOBAL
+    category: funding
+    authority: 0.5
+    tier: 2
+
+  # ---------------------------------------------------
+  # 4. AI NEWS
+  # ---------------------------------------------------
+  - name: OpenAI Blog
+    type: rss
+    url: https://openai.com/blog/rss.xml
+    country: US
+    category: ai
+    authority: 1
+    tier: 1
+  - name: Anthropic News
+    type: rss
+    url: https://www.anthropic.com/news/rss.xml
+    country: US
+    category: ai
+    authority: 1
+    tier: 1
+    enabled: false  # Anthropic has no RSS feed — no public endpoint exists
+  - name: Google DeepMind
+    type: rss
+    url: https://deepmind.google/blog/rss.xml
+    country: US
+    category: ai
+    authority: 0.95
+    tier: 2
+  - name: Google AI Blog
+    type: rss
+    url: https://blog.google/technology/ai/rss/
+    country: US
+    category: ai
+    authority: 0.95
+    tier: 2
+  - name: Meta AI Blog
+    type: rss
+    url: https://ai.meta.com/blog/rss/
+    country: US
+    category: ai
+    authority: 0.9
+    tier: 2
+    enabled: false  # ai.meta.com returns HTTP 400; no working RSS endpoint
+  - name: Mistral AI News
+    type: rss
+    url: https://mistral.ai/news/feed.xml
+    country: FR
+    category: ai
+    authority: 0.88
+    tier: 2
+    enabled: false  # Mistral has no RSS feed
+  - name: NVIDIA Developer Blog
+    type: rss
+    url: https://developer.nvidia.com/blog/feed/
+    country: US
+    category: ai
+    authority: 0.85
+    tier: 2
+  - name: Microsoft Research Blog
+    type: rss
+    url: https://www.microsoft.com/en-us/research/feed/
+    country: US
+    category: ai
+    authority: 0.85
+    tier: 3
+  - name: Cohere Blog
+    type: rss
+    url: https://cohere.com/blog/rss.xml
+    country: CA
+    category: ai
+    authority: 0.8
+    tier: 3
+    enabled: false  # returns HTML; no working RSS feed
+  - name: Hugging Face Blog
+    type: rss
+    url: https://huggingface.co/blog/feed.xml
+    country: US
+    category: ai
+    authority: 0.9
+    tier: 2
+  - name: Hugging Face Daily Papers
+    type: rss
+    url: https://huggingface.co/papers/feed.xml
+    country: GLOBAL
+    category: ai
+    authority: 0.85
+    tier: 2
+    enabled: false  # returns HTTP 401; feed requires authentication
+  - name: LangChain Blog
+    type: rss
+    url: https://blog.langchain.dev/rss/
+    country: US
+    category: ai
+    authority: 0.78
+    tier: 3
+    enabled: false  # returns HTML; blog moved off Ghost, no working RSS
+  - name: Ollama Blog
+    type: rss
+    url: https://ollama.com/blog/rss.xml
+    country: US
+    category: ai
+    authority: 0.75
+    tier: 3
+  - name: Papers with Code
+    type: rss
+    url: https://paperswithcode.com/latest/rss
+    country: GLOBAL
+    category: ai
+    authority: 0.8
+    tier: 3
+    enabled: false  # returns HTML; no working RSS feed
+  - name: arXiv cs.LG
+    type: rss
+    url: http://export.arxiv.org/rss/cs.LG
+    country: GLOBAL
+    category: ai
+    authority: 0.8
+    tier: 3
+    enabled: false  # FIREHOSE — 100s of papers/day; use HF Daily Papers instead
+  - name: arXiv cs.CL
+    type: rss
+    url: http://export.arxiv.org/rss/cs.CL
+    country: GLOBAL
+    category: ai
+    authority: 0.8
+    tier: 3
+    enabled: false  # FIREHOSE — 100s of papers/day; use HF Daily Papers instead
+  - name: The Batch (DeepLearning.AI)
+    type: rss
+    url: https://www.deeplearning.ai/the-batch/feed/
+    country: US
+    category: ai
+    authority: 0.88
+    tier: 2
+    enabled: false  # no working RSS feed found
+  - name: Import AI (Jack Clark)
+    type: rss
+    url: https://importai.substack.com/feed
+    country: US
+    category: ai
+    authority: 0.88
+    tier: 3
+  - name: TLDR AI
+    type: rss
+    url: https://tldr.tech/api/rss/ai
+    country: US
+    category: ai
+    authority: 0.75
+    tier: 2
+  - name: MIT Tech Review - AI
+    type: rss
+    url: https://www.technologyreview.com/topic/artificial-intelligence/feed/
+    country: US
+    category: ai
+    authority: 0.9
+    tier: 2
+  - name: VentureBeat AI
+    type: rss
+    url: https://venturebeat.com/category/ai/feed/
+    country: US
+    category: ai
+    authority: 0.75
+    tier: 2
+  - name: Ars Technica - AI
+    type: rss
+    url: https://arstechnica.com/ai/feed/
+    country: US
+    category: ai
+    authority: 0.8
+    tier: 2
+  - name: Simon Willison (AI/LLM analysis)
+    type: rss
+    url: https://simonwillison.net/atom/everything/
+    country: UK
+    category: ai
+    authority: 0.85
+    tier: 3
+  - name: Reddit r/LocalLLaMA
+    type: rss
+    url: https://www.reddit.com/r/LocalLLaMA/.rss
+    country: US
+    category: ai
+    authority: 0.6
+    tier: 2
+  - name: Reddit r/MachineLearning
+    type: rss
+    url: https://www.reddit.com/r/MachineLearning/.rss
+    country: US
+    category: ai
+    authority: 0.65
+    tier: 2
+  - name: Hacker News AI
+    type: api
+    url: https://hn.algolia.com/api/v1/search?query=AI%20OR%20LLM%20OR%20GPT&tags=story&numericFilters=points%3E100
+    country: US
+    category: ai
+    authority: 0.68
+    tier: 2
+  - name: Analytics India Magazine
+    type: rss
+    url: https://analyticsindiamag.com/feed/
+    country: IN
+    category: ai
+    authority: 0.8
+    tier: 1
+    enabled: false  # RSS returns HTML; feed broken
+  - name: Google News - AI India
+    type: google_news
+    url: https://news.google.com/rss/search?q=artificial+intelligence+india+OR+%22GenAI%22+india&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: ai
+    authority: 0.55
+    tier: 2
+  - name: NVIDIA AI Blog
+    type: rss
+    url: https://blogs.nvidia.com/feed/
+    country: US
+    category: ai
+    authority: 0.9
+    tier: 2
+  - name: AWS Machine Learning Blog
+    type: rss
+    url: https://aws.amazon.com/blogs/machine-learning/feed/
+    country: US
+    category: ai
+    authority: 0.85
+    tier: 2
+  - name: Microsoft AI Blog
+    type: rss
+    url: https://blogs.microsoft.com/ai/feed/
+    country: US
+    category: ai
+    authority: 0.9
+    tier: 2
+  - name: Google News - Anthropic / Claude
+    type: google_news
+    url: https://news.google.com/rss/search?q=anthropic+OR+claude+AI+model&hl=en&gl=US&ceid=US:en
+    country: US
+    category: ai
+    authority: 0.55
+    tier: 2
+
+  # ---------------------------------------------------
+  # 5. SKILLS & TOOLS
+  # ---------------------------------------------------
+  - name: Vercel Blog
+    type: rss
+    url: https://vercel.com/atom
+    country: US
+    category: skills_tools
+    authority: 0.9
+    tier: 2
+  - name: Next.js Blog
+    type: rss
+    url: https://nextjs.org/feed.xml
+    country: US
+    category: skills_tools
+    authority: 0.9
+    tier: 2
+  - name: Svelte Blog
+    type: rss
+    url: https://svelte.dev/blog/rss.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.88
+    tier: 3
+  - name: Astro Blog
+    type: rss
+    url: https://astro.build/rss.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+  - name: Angular Blog
+    type: rss
+    url: https://blog.angular.dev/feed
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.88
+    tier: 3
+  - name: Tailwind CSS Blog
+    type: rss
+    url: https://tailwindcss.com/feed.xml
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+    enabled: false  # no working feed found (404/500)
+  - name: Docker Blog
+    type: rss
+    url: https://www.docker.com/blog/feed/
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+    enabled: false  # blocks bots with HTTP 403
+  - name: HashiCorp Blog
+    type: rss
+    url: https://www.hashicorp.com/blog/feed.xml
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+  - name: AWS News Blog
+    type: rss
+    url: https://aws.amazon.com/blogs/aws/feed/
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 2
+  - name: Kubernetes Blog
+    type: rss
+    url: https://kubernetes.io/feed.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.9
+    tier: 3
+  - name: Rust Blog
+    type: rss
+    url: https://blog.rust-lang.org/feed.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.92
+    tier: 3
+  - name: Go Blog
+    type: rss
+    url: https://go.dev/blog/feed.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.92
+    tier: 3
+  - name: Python Insider
+    type: rss
+    url: https://blog.python.org/feeds/posts/default
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.92
+    tier: 3
+  - name: Node.js Blog
+    type: rss
+    url: https://nodejs.org/en/feed/blog.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.9
+    tier: 3
+  - name: TypeScript DevBlog
+    type: rss
+    url: https://devblogs.microsoft.com/typescript/feed/
+    country: US
+    category: skills_tools
+    authority: 0.9
+    tier: 3
+  - name: .NET DevBlog
+    type: rss
+    url: https://devblogs.microsoft.com/dotnet/feed/
+    country: US
+    category: skills_tools
+    authority: 0.88
+    tier: 3
+  - name: Deno Blog
+    type: rss
+    url: https://deno.com/feed
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+  - name: Spring Blog
+    type: rss
+    url: https://spring.io/blog.atom
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+  - name: Django Weblog
+    type: rss
+    url: https://www.djangoproject.com/rss/weblog/
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+  - name: Laravel News
+    type: rss
+    url: https://laravel-news.com/feed
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.8
+    tier: 3
+  - name: React Releases
+    type: rss
+    url: https://github.com/facebook/react/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.95
+    tier: 3
+  - name: Vue Releases
+    type: rss
+    url: https://github.com/vuejs/core/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.95
+    tier: 3
+  - name: Next.js Releases
+    type: rss
+    url: https://github.com/vercel/next.js/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.95
+    tier: 3
+  - name: Vite Releases
+    type: rss
+    url: https://github.com/vitejs/vite/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.92
+    tier: 3
+  - name: Bun Releases
+    type: rss
+    url: https://github.com/oven-sh/bun/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.9
+    tier: 3
+  - name: TypeScript Releases
+    type: rss
+    url: https://github.com/microsoft/TypeScript/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.95
+    tier: 3
+  - name: Kubernetes Releases
+    type: rss
+    url: https://github.com/kubernetes/kubernetes/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.92
+    tier: 3
+  - name: PyTorch Releases
+    type: rss
+    url: https://github.com/pytorch/pytorch/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.92
+    tier: 3
+  - name: Flutter Releases
+    type: rss
+    url: https://github.com/flutter/flutter/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.9
+    tier: 3
+  - name: Tailwind Releases
+    type: rss
+    url: https://github.com/tailwindlabs/tailwindcss/releases.atom
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.9
+    tier: 3
+  - name: GitHub Trending (daily, all languages)
+    type: rss
+    url: https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.7
+    tier: 2
+  - name: Hacker News (points>100)
+    type: api
+    url: https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points%3E100
+    country: US
+    category: skills_tools
+    authority: 0.7
+    tier: 2
+  - name: Lobsters
+    type: rss
+    url: https://lobste.rs/rss
+    country: US
+    category: skills_tools
+    authority: 0.7
+    tier: 2
+  - name: Changelog
+    type: rss
+    url: https://changelog.com/feed
+    country: US
+    category: skills_tools
+    authority: 0.75
+    tier: 2
+  - name: InfoQ
+    type: rss
+    url: https://feed.infoq.com/
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 2
+  - name: Stack Overflow Blog
+    type: rss
+    url: https://stackoverflow.blog/feed/
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 2
+  - name: GitHub Trending (weekly, Python)
+    type: rss
+    url: https://mshibanami.github.io/GitHubTrendingRSS/weekly/python.xml
+    country: GLOBAL
+    category: skills_tools
+    authority: 0.7
+    tier: 2
+  - name: Product Hunt
+    type: rss
+    url: https://www.producthunt.com/feed
+    country: US
+    category: skills_tools
+    authority: 0.7
+    tier: 2
+  - name: LinkedIn Engineering Blog
+    type: rss
+    url: https://engineering.linkedin.com/blog.rss
+    country: US
+    category: skills_tools
+    authority: 0.85
+    tier: 3
+
+  # ---------------------------------------------------
+  # 6. BLOGS & TUTORIALS & ENGINEERING
+  # ---------------------------------------------------
+  - name: Netflix Tech Blog
+    type: rss
+    url: https://netflixtechblog.com/feed
+    country: US
+    category: blogs_tutorials
+    authority: 0.9
+    tier: 3
+  - name: Meta Engineering
+    type: rss
+    url: https://engineering.fb.com/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.9
+    tier: 3
+  - name: Uber Engineering
+    type: rss
+    url: https://www.uber.com/blog/engineering/rss/
+    country: US
+    category: blogs_tutorials
+    authority: 0.9
+    tier: 3
+    enabled: false  # Uber engineering blog has no working RSS (406/404)
+  - name: Airbnb Engineering
+    type: rss
+    url: https://medium.com/feed/airbnb-engineering
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Stripe Blog
+    type: rss
+    url: https://stripe.com/blog/feed.rss
+    country: US
+    category: blogs_tutorials
+    authority: 0.9
+    tier: 3
+  - name: Cloudflare Blog
+    type: rss
+    url: https://blog.cloudflare.com/rss/
+    country: US
+    category: blogs_tutorials
+    authority: 0.88
+    tier: 2
+  - name: Dropbox Tech
+    type: rss
+    url: https://dropbox.tech/feed
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Spotify Engineering
+    type: rss
+    url: https://engineering.atspotify.com/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: GitHub Engineering
+    type: rss
+    url: https://github.blog/engineering/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.88
+    tier: 3
+  - name: Slack Engineering
+    type: rss
+    url: https://slack.engineering/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Pinterest Engineering
+    type: rss
+    url: https://medium.com/feed/pinterest-engineering
+    country: US
+    category: blogs_tutorials
+    authority: 0.82
+    tier: 3
+  - name: Razorpay Engineering
+    type: rss
+    url: https://engineering.razorpay.com/feed
+    country: IN
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Swiggy Bytes
+    type: rss
+    url: https://bytes.swiggy.com/feed
+    country: IN
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: CRED Engineering
+    type: rss
+    url: https://engineering.cred.club/feed
+    country: IN
+    category: blogs_tutorials
+    authority: 0.82
+    tier: 3
+  - name: Flipkart Tech
+    type: rss
+    url: https://blog.flipkart.tech/feed
+    country: IN
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Zerodha Tech
+    type: rss
+    url: https://zerodha.tech/blog/index.xml
+    country: IN
+    category: blogs_tutorials
+    authority: 0.82
+    tier: 3
+  - name: Zomato Engineering
+    type: rss
+    url: https://www.zomato.com/blog/feed
+    country: IN
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+    enabled: false  # returns HTML; no working RSS feed
+  - name: PhonePe Engineering
+    type: rss
+    url: https://medium.com/feed/phonepe-technology
+    country: IN
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+    enabled: false  # Medium publication removed (404)
+  - name: Dream11 Engineering
+    type: rss
+    url: https://medium.com/feed/dream11-engineering
+    country: IN
+    category: blogs_tutorials
+    authority: 0.78
+    tier: 3
+    enabled: false  # Medium publication removed (404)
+  - name: Postman Blog
+    type: rss
+    url: https://blog.postman.com/feed/
+    country: IN
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+  - name: GeeksforGeeks
+    type: rss
+    url: https://www.geeksforgeeks.org/feed/
+    country: IN
+    category: blogs_tutorials
+    authority: 0.72
+    tier: 2
+    enabled: false  # RSS returns HTML; GFG has disabled their feed
+  - name: freeCodeCamp News
+    type: rss
+    url: https://www.freecodecamp.org/news/rss/
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 2
+  - name: CSS-Tricks
+    type: rss
+    url: https://css-tricks.com/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+  - name: Smashing Magazine
+    type: rss
+    url: https://www.smashingmagazine.com/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+  - name: Real Python
+    type: rss
+    url: https://realpython.com/atom.xml
+    country: US
+    category: blogs_tutorials
+    authority: 0.82
+    tier: 3
+  - name: Baeldung (Java)
+    type: rss
+    url: https://feeds.feedburner.com/Baeldung
+    country: GLOBAL
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+    enabled: false  # FeedBurner is dead; baeldung.com/feed returns 403
+  - name: LogRocket Blog
+    type: rss
+    url: https://blog.logrocket.com/feed/
+    country: US
+    category: blogs_tutorials
+    authority: 0.75
+    tier: 3
+  - name: MDN Blog
+    type: rss
+    url: https://developer.mozilla.org/en-US/blog/rss.xml
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: dev.to
+    type: rss
+    url: https://dev.to/feed
+    country: US
+    category: blogs_tutorials
+    authority: 0.6
+    tier: 2
+  - name: The Pragmatic Engineer (Gergely Orosz)
+    type: rss
+    url: https://newsletter.pragmaticengineer.com/feed
+    country: GLOBAL
+    category: blogs_tutorials
+    authority: 0.92
+    tier: 2
+  - name: ByteByteGo (system design)
+    type: rss
+    url: https://blog.bytebytego.com/feed
+    country: US
+    category: blogs_tutorials
+    authority: 0.88
+    tier: 2
+  - name: Martin Fowler
+    type: rss
+    url: https://martinfowler.com/feed.atom
+    country: UK
+    category: blogs_tutorials
+    authority: 0.95
+    tier: 3
+  - name: overreacted (Dan Abramov)
+    type: rss
+    url: https://overreacted.io/rss.xml
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Julia Evans (jvns.ca)
+    type: rss
+    url: https://jvns.ca/atom.xml
+    country: CA
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: Brendan Gregg (performance)
+    type: rss
+    url: https://www.brendangregg.com/blog/rss.xml
+    country: US
+    category: blogs_tutorials
+    authority: 0.85
+    tier: 3
+  - name: High Scalability
+    type: rss
+    url: https://highscalability.com/rss/
+    country: US
+    category: blogs_tutorials
+    authority: 0.8
+    tier: 3
+
+  # ---------------------------------------------------
+  # 7. YOUTUBE
+  # ---------------------------------------------------
+  - name: YouTube - Fireship
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA
+    country: US
+    category: youtube
+    authority: 0.85
+    tier: 2
+  - name: YouTube - freeCodeCamp
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UC8butISFwT-Wl7EV0hUK0BQ
+    country: US
+    category: youtube
+    authority: 0.85
+    tier: 3
+  - name: YouTube - CodeWithHarry
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCeVMnSShP_Iviwkknt83cww
+    country: IN
+    category: youtube
+    authority: 0.75
+    tier: 3
+  - name: YouTube - Apna College
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UC1XBh-m27kkgwLAwu_SRJBg
+    country: IN
+    category: youtube
+    authority: 0.75
+    tier: 3
+  - name: YouTube - takeUforward (Striver)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCJskGeByzRRSvmOyZOz61ig
+    country: IN
+    category: youtube
+    authority: 0.8
+    tier: 3
+  - name: YouTube - Kunal Kushwaha
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCwY7chGINzoVuEB3mWOi_zw
+    country: IN
+    category: youtube
+    authority: 0.75
+    tier: 3
+  - name: YouTube - Harkirat Singh (100xDevs)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=REPLACE_ME
+    handle: "@harkirat1"
+    country: IN
+    category: youtube
+    authority: 0.75
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@harkirat1"
+  - name: YouTube - CodeHelp (Love Babbar)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.75
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@CodeHelp"
+  - name: YouTube - NeetCode
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: US
+    category: youtube
+    authority: 0.8
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@NeetCode"
+  - name: YouTube - Gaurav Sen (system design)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.82
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@gkcs"
+  - name: YouTube - Arpit Bhayani (system design)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.82
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@AsliEngineering"
+  - name: YouTube - Hitesh Choudhary
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.78
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@HiteshCodeLab"
+  - name: YouTube - Akshay Saini (Namaste JS)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.78
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@akshaymarch7"
+  - name: YouTube - Piyush Garg
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.72
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@piyushgargdev"
+  - name: YouTube - Tanay Pratap
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.72
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@tanaypratap"
+  - name: YouTube - Ishan Sharma
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: IN
+    category: youtube
+    authority: 0.65
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@IshanSharma7390"
+  - name: YouTube - ThePrimeagen
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: US
+    category: youtube
+    authority: 0.78
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@ThePrimeagen"
+  - name: YouTube - Theo (t3.gg)
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: US
+    category: youtube
+    authority: 0.75
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@t3dotgg"
+  - name: YouTube - ByteByteGo
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: US
+    category: youtube
+    authority: 0.8
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@ByteByteGo"
+  - name: YouTube - Two Minute Papers
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: HU
+    category: youtube
+    authority: 0.78
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@TwoMinutePapers"
+  - name: YouTube - AI Explained
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=RESOLVE
+    country: US
+    category: youtube
+    authority: 0.75
+    tier: 3
+    enabled: false  # RESOLVE: yt-dlp --print channel_id "https://www.youtube.com/@aiexplained-official"
+  - name: YouTube - Traversy Media
+    type: rss
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UC29ju8bIPH5as8OGnQzwJyA
+    country: US
+    category: youtube
+    authority: 0.75
+    tier: 3

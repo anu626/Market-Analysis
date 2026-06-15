@@ -1,0 +1,13 @@
+// {
+//   "type": "service_account",
+//   "project_id": "naukri-iimjobs-jobseeker",
+//   "private_key_id": "679159e38658df157b8ddf76fe863d01648c96a0",
+//   "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC3eW9JvgLbqR8M\nXHOiZBgvpFuViMf/mLFeBxhVMy6m3MNo972VZmtmF3ut3/Boz2JkcCOFoLQ30g/Z\nAIgNu/cI3cdSPqmKg3pAXqjEOmZG36wf/DJm7lD6zO9JNVRy22eKMdHWKIq0aYg6\nVN+exLzwqS5Xr6IaTqvYTCgXuJ7S9bY0M55NseOgTMhlyjCm84kXIb1DFTY0FVYk\n5dXlJ8OQB6/YjSYdnUfCOvVruNqmQyeAUTNpyEssbysPK3GFZdPM9p+pq9HKa/jh\np9jHx+OtA4AOfx+SZtu8+18G/JeuHn3rt0sEXz0tfDo+maUEu+YdMPu0rCg6UBUo\nIg8lkDqvAgMBAAECggEAWtGk+VsxffsOr+c5pAopALg6T2BII6i5L2KStGXj81v2\n7IgpU4FBq2T3Zz+g+LijKzVpF/XPD4yPJKsDLc07wKtLRVZYRQTE6IUSxCNmSjHg\nuWp0pofUFPmJfvMDjOE3NOxpQrmJwzkz4i/uC2C2Z+hO1L/PHXeQz74O4IMWNzTq\nWQsUQziQAuJDkWJSil3qTC1Ws0i8835J/skFebR/GuHCSPMRJhwNB8mcAFustLDR\nTCjKNng9e2HwjuFoNzX3hHh3ZcfSrtDN1n4BrtxqD5QBc1CJ+Kcpd9TtR3MGF6th\nI5j0jeAUmzPEpVwid1EhYQFKjHwG5RS+S1q/w7anCQKBgQD1VB58NFoptGCsbdpn\nRAIY1HxJeGsfDg2ii7IGq5smjh4wnM30mlmJNexl/IEflfXyrF6rS0pmRV5bmZ1g\nIoKmr5ElEa5ol2Okw0Kh1dH2F5bsGe01VakitvlNJEy1sfHem1lRBdhwOWZ8iVjG\nJFKqaGU9iiSpfHsTIGDY4xF42QKBgQC/dIgZpBoayuIGQxpTYKCaGoWEU7nmICMk\n1cfFRqQqppALBf72edxIjbrsHGd+I7DEltH1B6F/F1NyEfhXGgZivr1SnTRPvZ3v\nmJs2wb5dk/zE0vb0Ls3L6FZdVv3aZV7VKjIffMuaBjZfgPeHkyNUddxgnqFmQvto\nh9DH2xdaxwKBgCpzH8NGG8PTnla3u27a6bH6MndUCtUYzWsu2OMmlnYZaUfoGgsV\nGiEP35PWGVGp1SDkio0BPiJsJmObNQwJbKoC/w52/MLET02XK9Rs9yOp+UdpRQ5R\ngC6tkn2ypkNaQwvNvaqzZDwm8oDiEyZV6qfp4HrBiI57J6CrnZZp1AAhAoGATUHr\nAd3Uoucn2jsNzoN5i3YUVteqdpCVXfHekV72NDfOfIRI5JE8MRLwUQMNSDuCw3HQ\n+72+j5iMFcXmns9jsEkkAMhrKZpstxiv2aLI/N4Q7CPtf4+7gAMbhsLp4U1yvTYv\nz8D+MAM9wcA7IrxfT1/YNC0PGEMDTKUxvNROUlUCgYEA70iSa/KpyAi9AtWuXsQV\nfNuuGChxUwrRDXQC/0OQjM5Wt1HTZtX8c23/OiU0vnjiElD542pwTmuxdKggVFSx\nxO5Zn7wHHa48fkqykJI5GIAdUVF8xz4Bdbf+NDwcCoEfS99yNLQ9sHmQuf9oSFsU\npMjLTXRwyyiHzHgeI2x9w5c=\n-----END PRIVATE KEY-----\n",
+//   "client_email": "naukri-iimjobs-jobseeker@naukri-iimjobs-jobseeker.iam.gserviceaccount.com",
+//   "client_id": "100868346242816483745",
+//   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+//   "token_uri": "https://oauth2.googleapis.com/token",
+//   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+//   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/naukri-iimjobs-jobseeker%40naukri-iimjobs-jobseeker.iam.gserviceaccount.com",
+//   "universe_domain": "googleapis.com"
+// }

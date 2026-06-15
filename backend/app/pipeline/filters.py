@@ -128,18 +128,18 @@ def dedupe_batch(items: list[dict], threshold: int = 82) -> list[dict]:
 # =====================================================
 
 _CATEGORY_RULES: list[tuple[str, list[str]]] = [
-    ("layoffs",      [r"\blayoffs?\b", r"job cuts", r"workforce reduction",
-                      r"hiring freeze", r"pink slips?", r"retrench"]),
-    ("funding",      [r"raises? \$", r"raises? rs", r"series [a-e]\b", r"seed round",
-                      r"funding round", r"valuation of", r"acquires?\b", r"acquisition"]),
-    ("hiring",       [r"\bhiring\b", r"to hire \d+", r"recruitment drive",
-                      r"salary hike", r"appraisal", r"increment", r"campus placement"]),
-    ("ai",           [r"\bai\b", r"\bllm\b", r"\bgpt\b", r"\bgenai\b", r"generative ai",
-                      r"machine learning",
-                      r"openai|anthropic|deepmind|gemini|claude"]),
-    ("skills_tools", [r"version \d+(\.\d+)? release",
-                      r"\breleased?\b.*\b(framework|library|sdk)\b",
-                      r"open[- ]source", r"github", r"deprecat"]),
+    ("Layoffs",       [r"\blayoffs?\b", r"job cuts", r"workforce reduction",
+                       r"hiring freeze", r"pink slips?", r"retrench"]),
+    ("Funding",       [r"raises? \$", r"raises? rs", r"series [a-e]\b", r"seed round",
+                       r"funding round", r"valuation of", r"acquires?\b", r"acquisition"]),
+    ("recruitment",   [r"\bhiring\b", r"to hire \d+", r"recruitment drive",
+                       r"salary hike", r"appraisal", r"increment", r"campus placement"]),
+    ("AI",            [r"\bai\b", r"\bllm\b", r"\bgpt\b", r"\bgenai\b", r"generative ai",
+                       r"machine learning",
+                       r"openai|anthropic|deepmind|gemini|claude"]),
+    ("Tech",          [r"version \d+(\.\d+)? release",
+                       r"\breleased?\b.*\b(framework|library|sdk)\b",
+                       r"open[- ]source", r"github", r"deprecat"]),
 ]
 
 
@@ -161,8 +161,8 @@ def categorize_override(item: dict) -> str | None:
 # =====================================================
 
 _HALF_LIFE: dict[str, float] = {
-    "layoffs": 24, "hiring": 36, "funding": 48, "ai": 48,
-    "skills_tools": 96, "blogs_tutorials": 168, "youtube": 96,
+    "Layoffs": 24, "recruitment": 36, "Hiring": 36, "Funding": 48, "AI": 48,
+    "Market Trends": 72, "Tech": 96, "Blogs": 168, "Youtube": 96,
 }
 
 _INDIA_BOOST = 1.3

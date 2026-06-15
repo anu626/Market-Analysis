@@ -13,6 +13,8 @@ env/
 .env
 *.env
 
+*cred.json*
+
 # Sentence-transformers model cache
 ~/.cache/torch/
 

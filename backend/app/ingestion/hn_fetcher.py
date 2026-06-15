@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import httpx
 
 from app.config import settings
-from app.ingestion.source_loader import sources_of_type
+from app.ingestion.source_loader import sources_of_type, sources_of_type_and_vertical
 
 logger = logging.getLogger(__name__)
 
@@ -126,9 +126,10 @@ async def _fetch_algolia_source(
     return items
 
 
-async def fetch_hn_async() -> list[dict]:
+async def fetch_hn_async(vertical: str | None = None) -> list[dict]:
+    base = sources_of_type_and_vertical(vertical, "api") if vertical else sources_of_type("api")
     hn_sources = [
-        s for s in sources_of_type("api") if "hacker-news.firebaseio.com" in s.get("url", "") or "hn.algolia.com" in s.get("url", "")
+        s for s in base if "hacker-news.firebaseio.com" in s.get("url", "") or "hn.algolia.com" in s.get("url", "")
     ]
 
     out: list[dict] = []
@@ -137,13 +138,13 @@ async def fetch_hn_async() -> list[dict]:
             url = src["url"]
             name = src["name"]
             if "hn.algolia.com" in url:
-                items = await _fetch_algolia_source(client, name, url, src.get("vertical", "tech"))
+                items = await _fetch_algolia_source(client, name, url, src.get("category") or src.get("vertical", "tech"))
             else:
-                items = await _fetch_firebase_source(client, name, url, settings.HN_FETCH_LIMIT, src.get("vertical", "tech"))
+                items = await _fetch_firebase_source(client, name, url, settings.HN_FETCH_LIMIT, src.get("category") or src.get("vertical", "tech"))
             logger.info("HN %s -> %d items", name, len(items))
             out.extend(items)
     return out
 
 
-def fetch_hn() -> list[dict]:
-    return asyncio.run(fetch_hn_async())
+def fetch_hn(vertical: str | None = None) -> list[dict]:
+    return asyncio.run(fetch_hn_async(vertical))

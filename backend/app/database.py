@@ -53,3 +53,6 @@ def _migrate(eng):
         if "ai_enriched_at" not in existing:
             conn.execute(text("ALTER TABLE articles ADD COLUMN ai_enriched_at DATETIME"))
             conn.commit()
+        if "hiring_relevant" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN hiring_relevant BOOLEAN NOT NULL DEFAULT 0"))
+            conn.commit()

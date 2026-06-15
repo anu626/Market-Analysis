@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from app.ingestion.source_loader import sources_of_type
+from app.ingestion.source_loader import sources_of_type, sources_of_type_and_vertical
 
 logger = logging.getLogger(__name__)
 
@@ -110,9 +110,10 @@ def _fetch_lever(name: str, url: str) -> list[dict]:
     return items
 
 
-def fetch_json_api() -> list[dict]:
+def fetch_json_api(vertical: str | None = None) -> list[dict]:
+    base = sources_of_type_and_vertical(vertical, "json_api") if vertical else sources_of_type("json_api")
     out: list[dict] = []
-    for src in sources_of_type("json_api"):
+    for src in base:
         url = src["url"]
         name = src["name"]
         if "greenhouse.io" in url:

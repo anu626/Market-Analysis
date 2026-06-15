@@ -8,6 +8,7 @@ class ArticleOut(BaseModel):
     title: str
     url: str
     source_name: str
+    source_logo: str | None = None
     score: int
     summary: str | None = None
     published_at: datetime | None = None
@@ -17,6 +18,7 @@ class ArticleOut(BaseModel):
     source_count: int = 1
     ai_title: str | None = None
     ai_summary: str | None = None
+    hiring_relevant: bool = False
 
     class Config:
         from_attributes = True
@@ -26,4 +28,5 @@ class IngestionResult(BaseModel):
     fetched: int
     inserted: int
     duplicates: int
+    filtered: int
     errors: int

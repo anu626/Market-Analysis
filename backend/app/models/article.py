@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Float,
@@ -46,6 +47,7 @@ class Article(Base):
     ai_title = Column(String(512), nullable=True)
     ai_summary = Column(Text, nullable=True)
     ai_enriched_at = Column(DateTime, nullable=True)
+    hiring_relevant = Column(Boolean, default=False, nullable=False)
 
     source = relationship("Source", back_populates="articles")
 

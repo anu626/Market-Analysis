@@ -107,7 +107,7 @@ def compute_rank(
 ) -> float:
     now = now or datetime.now(timezone.utc).replace(tzinfo=None)
 
-    authority_map = _load_source_config()
+    authority_map, indian_sources = _load_source_config()
 
     # Use published_at for age so newly-ingested old articles don't score as fresh
     age_ref = published_at if published_at and published_at < created_at else created_at
@@ -121,7 +121,7 @@ def compute_rank(
         0.30 * recency
         + 0.20 * velocity
         + 0.20 * src_count
-        + 0.20 * topic
+        + 0.20 * locale
         + 0.10 * authority
     )
 
@@ -159,4 +159,4 @@ def recompute_all(db: Session) -> int:
 
 def _should_highlight(vertical: str, rank_score: float) -> bool:
     """True for high-ranking articles in the platform's core verticals."""
-    return vertical in ("ai", "software", "hardware", "hiring") and rank_score >= 0.50
+    return vertical in ("AI", "Hiring", "Layoffs", "Funding") and rank_score >= 0.50

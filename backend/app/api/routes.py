@@ -1,26 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import and_, func, or_
+from sqlalchemy import case, func, or_, and_
 from sqlalchemy.orm import Session
 
 from app.api.schemas import ArticleOut, IngestionResult
 from app.database import get_db
-from app.ingestion.source_loader import sources_of_type
+from app.ingestion.source_loader import CATEGORY_TO_VERTICAL, get_logo_map, sources_of_type
 from app.models import Article
 from app.ranking.ranker import recompute_all
 from app.services.cache import cache_delete_prefix, cache_get, cache_set
-from app.services.ingestion_service import run_full_ingestion
+from app.services.ingestion_service import run_full_ingestion, run_vertical_ingestion
 
 
 
 def _dedup_by_story(rows: list, offset: int, limit: int) -> list[dict]:
     """Deduplicate articles sharing the same story_hash, keeping the top-ranked.
-    Returns dicts with an injected source_count field."""
+    Returns dicts with an injected source_count and source_logo field."""
+    logos = get_logo_map()
     seen: dict[str, dict] = {}  # story_hash -> best article dict
     counts: dict[str, set] = {}  # story_hash -> set of source_names
 
     for r in rows:
         key = r.story_hash or str(r.id)
         d = ArticleOut.model_validate(r).model_dump()
+        d["source_logo"] = logos.get(r.source_name)
         if key not in seen:
             seen[key] = d
             counts[key] = {r.source_name}
@@ -44,13 +46,14 @@ def health():
 
 @router.get("/sources")
 def list_sources(db: Session = Depends(get_db)):
+    logos = get_logo_map()
     rows = (
         db.query(Article.source_name, func.count(Article.id).label("count"))
         .group_by(Article.source_name)
         .order_by(func.count(Article.id).desc())
         .all()
     )
-    return [{"name": r[0], "count": r[1]} for r in rows]
+    return [{"name": r[0], "count": r[1], "logo": logos.get(r[0])} for r in rows]
 
 
 @router.get("/sources/config")
@@ -67,6 +70,7 @@ def list_configured_sources(
         srcs = [s for s in srcs if s.get("type") == type_]
     if tier:
         srcs = [s for s in srcs if s.get("tier") == tier]
+    logos = get_logo_map()
     return [
         {
             "name": s["name"],
@@ -77,6 +81,7 @@ def list_configured_sources(
             "country": s.get("country"),
             "tags": s.get("tags", []),
             "url": s.get("url"),
+            "logo": logos.get(s["name"]),
         }
         for s in srcs
     ]
@@ -85,11 +90,9 @@ def list_configured_sources(
 def _apply_vertical(q, vertical: str | None):
     if not vertical:
         return q
-    if vertical == "tech":
-        return q.filter(Article.vertical.in_(["tech", "both"]))
-    if vertical == "business":
-        return q.filter(Article.vertical.in_(["business", "both"]))
-    return q
+    if vertical == "Tech":
+        return q.filter(Article.vertical.in_(["Tech", "Market Trends"]))
+    return q.filter(Article.vertical == vertical)
 
 
 def _apply_search(q, search: str | None):
@@ -118,9 +121,14 @@ def list_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
+    ai_priority = case(
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
+        (Article.ai_title.isnot(None), 1),
+        else_=2,
+    )
     # Fetch extra rows so dedup still fills the requested page after collapsing same-story articles
     rows = (
-        query.order_by(Article.rank_score.desc())
+        query.order_by(ai_priority, Article.rank_score.desc())
         .limit((offset + limit) * 5)
         .all()
     )
@@ -148,13 +156,133 @@ def latest_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
+    ai_priority = case(
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
+        (Article.ai_title.isnot(None), 1),
+        else_=2,
+    )
     rows = (
-        query.order_by(Article.created_at.desc())
+        query.order_by(ai_priority, Article.created_at.desc())
         .offset(offset)
         .limit(limit)
         .all()
     )
-    payload = [ArticleOut.model_validate(r).model_dump() for r in rows]
+    logos = get_logo_map()
+    payload = []
+    for r in rows:
+        d = ArticleOut.model_validate(r).model_dump()
+        d["source_logo"] = logos.get(r.source_name)
+        payload.append(d)
+    cache_set(cache_key, payload)
+    return payload
+
+
+_CANONICAL_VERTICALS = frozenset(["Hiring", "Layoffs", "Funding", "AI", "Tech", "Blogs", "Market Trends", "Youtube"])
+
+
+@router.get("/articles/digest", response_model=list[ArticleOut])
+def vertical_digest(
+    db: Session = Depends(get_db),
+    x: int = Query(5, ge=1, le=50, description="Number of articles to return, one best per vertical"),
+):
+    """Return x articles — the highest-ranked article from each canonical vertical, ordered by rank_score."""
+    cache_key = f"articles:digest:{x}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    logos = get_logo_map()
+
+    ai_priority = case(
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
+        (Article.ai_title.isnot(None), 1),
+        else_=2,
+    )
+
+    # One best enriched article per canonical vertical — different vertical each time
+    best: list[Article] = []
+    for vertical in _CANONICAL_VERTICALS:
+        top = (
+            db.query(Article)
+            .filter(Article.vertical == vertical)
+            .order_by(ai_priority, Article.rank_score.desc())
+            .first()
+        )
+        if top:
+            best.append(top)
+
+    # Sort final set: enriched first, then by rank_score, return top x
+    best.sort(key=lambda a: (0 if (a.ai_title and a.ai_summary) else (1 if a.ai_title else 2), -a.rank_score))
+    best = best[:x]
+
+    payload = []
+    for r in best:
+        d = ArticleOut.model_validate(r).model_dump()
+        d["source_logo"] = logos.get(r.source_name)
+        payload.append(d)
+
+    cache_set(cache_key, payload)
+    return payload
+
+
+@router.get("/articles/category/{category}", response_model=list[ArticleOut])
+def articles_by_category(
+    category: str,
+    db: Session = Depends(get_db),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    q: str | None = Query(None, description="Search title and summary"),
+    sort: str = Query("ranked", description="ranked | latest"),
+):
+    """Fetch articles for a specific category (e.g. recruitment, ai, layoffs)."""
+    mapped_vertical = CATEGORY_TO_VERTICAL.get(category.lower())
+    if not mapped_vertical:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown category '{category}'. Valid values: {sorted(CATEGORY_TO_VERTICAL)}",
+        )
+
+    cache_key = f"articles:category:{category}:{q or '_'}:{sort}:{limit}:{offset}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    query = db.query(Article).filter(Article.vertical == mapped_vertical)
+    query = _apply_search(query, q)
+
+    ai_priority = case(
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
+        (Article.ai_title.isnot(None), 1),
+        else_=2,
+    )
+    order = Article.rank_score.desc() if sort == "ranked" else Article.created_at.desc()
+
+    # For recruitment: surface purely hiring-focused articles first
+    if category.lower() == "recruitment":
+        _HIRING_KEYWORDS = [
+            "hiring", "to hire", "recruitment", "recruit", "job opening",
+            "fresher", "campus placement", "salary hike", "appraisal",
+            "headcount", "workforce expansion", "talent acquisition",
+            "job market", "it jobs", "tech jobs", "engineer hiring",
+        ]
+        hiring_signal = case(
+            (or_(*[
+                Article.title.ilike(f"%{kw}%") for kw in _HIRING_KEYWORDS
+            ]), 0),
+            else_=1,
+        )
+        rows = (
+            query.order_by(hiring_signal, ai_priority, order)
+            .limit((offset + limit) * 5)
+            .all()
+        )
+    else:
+        rows = (
+            query.order_by(ai_priority, order)
+            .limit((offset + limit) * 5)
+            .all()
+        )
+    payload = _dedup_by_story(rows, offset, limit)
     cache_set(cache_key, payload)
     return payload
 
@@ -164,13 +292,46 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
     row = db.get(Article, article_id)
     if not row:
         raise HTTPException(status_code=404, detail="Article not found")
-    return ArticleOut.model_validate(row)
+    d = ArticleOut.model_validate(row).model_dump()
+    d["source_logo"] = get_logo_map().get(row.source_name)
+    return d
+
+
+@router.post("/enrich/backfill")
+def backfill_enrichment(limit: int = Query(50, ge=1, le=100000)):
+    """Enrich up to `limit` unenriched articles in the background."""
+    from app.enrichment.enricher import enrich_pending
+    import threading
+    t = threading.Thread(target=enrich_pending, args=(limit,), daemon=True)
+    t.start()
+    return {"status": "started", "limit": limit}
 
 
 @router.post("/ingest", response_model=IngestionResult)
 def trigger_ingestion(db: Session = Depends(get_db)):
     """Manual trigger. Runs synchronously — fine for prototype, slow for prod."""
     stats = run_full_ingestion(db)
+    return IngestionResult(**stats)
+
+
+_VALID_VERTICALS = {"Hiring", "Recruitment", "Layoffs", "Funding", "AI", "Tech", "Blogs", "Market Trends", "Youtube"}
+
+# Map API-facing vertical names to the internal category key used by source_loader
+_VERTICAL_TO_CATEGORY = {
+    "Recruitment": "recruitment",
+}
+
+
+@router.post("/ingest/{vertical}", response_model=IngestionResult)
+def trigger_vertical_ingestion(vertical: str, db: Session = Depends(get_db)):
+    """Ingest news for a single vertical only."""
+    if vertical not in _VALID_VERTICALS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown vertical '{vertical}'. Valid values: {sorted(_VALID_VERTICALS)}",
+        )
+    category = _VERTICAL_TO_CATEGORY.get(vertical, vertical)
+    stats = run_vertical_ingestion(db, category)
     return IngestionResult(**stats)
 
 

@@ -1,0 +1,19 @@
+Collecting groq
+  Downloading groq-1.4.0-py3-none-any.whl.metadata (16 kB)
+Requirement already satisfied: anyio<5,>=3.5.0 in ./.venv/lib/python3.10/site-packages (from groq) (4.13.0)
+Requirement already satisfied: distro<2,>=1.7.0 in ./.venv/lib/python3.10/site-packages (from groq) (1.9.0)
+Requirement already satisfied: httpx<1,>=0.23.0 in ./.venv/lib/python3.10/site-packages (from groq) (0.28.1)
+Requirement already satisfied: pydantic<3,>=1.9.0 in ./.venv/lib/python3.10/site-packages (from groq) (2.13.3)
+Requirement already satisfied: sniffio in ./.venv/lib/python3.10/site-packages (from groq) (1.3.1)
+Requirement already satisfied: typing-extensions<5,>=4.14 in ./.venv/lib/python3.10/site-packages (from groq) (4.15.0)
+Requirement already satisfied: exceptiongroup>=1.0.2 in ./.venv/lib/python3.10/site-packages (from anyio<5,>=3.5.0->groq) (1.3.1)
+Requirement already satisfied: idna>=2.8 in ./.venv/lib/python3.10/site-packages (from anyio<5,>=3.5.0->groq) (3.13)
+Requirement already satisfied: certifi in ./.venv/lib/python3.10/site-packages (from httpx<1,>=0.23.0->groq) (2026.4.22)
+Requirement already satisfied: httpcore==1.* in ./.venv/lib/python3.10/site-packages (from httpx<1,>=0.23.0->groq) (1.0.9)
+Requirement already satisfied: h11>=0.16 in ./.venv/lib/python3.10/site-packages (from httpcore==1.*->httpx<1,>=0.23.0->groq) (0.16.0)
+Requirement already satisfied: annotated-types>=0.6.0 in ./.venv/lib/python3.10/site-packages (from pydantic<3,>=1.9.0->groq) (0.7.0)
+Requirement already satisfied: pydantic-core==2.46.3 in ./.venv/lib/python3.10/site-packages (from pydantic<3,>=1.9.0->groq) (2.46.3)
+Requirement already satisfied: typing-inspection>=0.4.2 in ./.venv/lib/python3.10/site-packages (from pydantic<3,>=1.9.0->groq) (0.4.2)
+Downloading groq-1.4.0-py3-none-any.whl (143 kB)
+Installing collected packages: groq
+Successfully installed groq-1.4.0

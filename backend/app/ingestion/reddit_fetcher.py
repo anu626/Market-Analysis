@@ -5,7 +5,7 @@ from datetime import datetime
 
 import httpx
 
-from app.ingestion.source_loader import sources_of_type
+from app.ingestion.source_loader import sources_of_type, sources_of_type_and_vertical
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +54,13 @@ def _fetch_subreddit(name: str, url: str, vertical: str = 'tech') -> list[dict]:
     return items
 
 
-def fetch_reddit() -> list[dict]:
+def fetch_reddit(vertical: str | None = None) -> list[dict]:
+    base = sources_of_type_and_vertical(vertical, "api") if vertical else sources_of_type("api")
     out: list[dict] = []
-    for src in sources_of_type("api"):
+    for src in base:
         if "reddit.com" not in src.get("url", ""):
             continue
-        items = _fetch_subreddit(src["name"], src["url"], src.get("vertical", "tech"))
+        items = _fetch_subreddit(src["name"], src["url"], src.get("category") or src.get("vertical", "tech"))
         logger.info("Reddit %s -> %d items", src["name"], len(items))
         out.extend(items)
     return out
