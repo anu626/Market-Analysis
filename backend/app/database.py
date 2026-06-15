@@ -25,7 +25,7 @@ def get_db():
 
 def init_db():
     from app.models import article  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
     _migrate(engine)
 
 
