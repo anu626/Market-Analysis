@@ -1,17 +1,12 @@
-"""Background article enrichment using Groq (Llama 3.3 70B).
+"""Background article enrichment using Google Gemini.
 
-  - Auth via GROQ_API_KEY env var (get free key at console.groq.com)
-  - Model: llama-3.3-70b-versatile (free tier, 30 RPM)
+  - Auth: GEMINI_API_KEY env var (Google AI Studio key) OR
+           service-account JSON at GOOGLE_CRED_PATH (or backend/cred.json)
+           with the Generative Language API enabled in the GCP project.
+  - Model: gemini-2.0-flash (override via GEMINI_MODEL)
+  - Uses httpx directly — no Google SDK version dependency.
   - Retry with exponential backoff
   - Robust JSON parsing (strip fences, fix common issues)
-
-Flow per article:
-  1. Fetch full article HTML via trafilatura
-  2. Call Groq with title + content → ai_title + ai_summary + vertical
-  3. Update article row in DB
-
-Runs in a background thread after each ingestion batch so ingestion
-is never blocked.
 """
 
 import json
@@ -21,13 +16,23 @@ import re
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
-_MODEL         = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-_RPM_LIMIT     = int(os.getenv("ENRICH_RPM_LIMIT", "25"))   # Groq free tier: 30 RPM
+_MODEL         = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+_RPM_LIMIT     = int(os.getenv("ENRICH_RPM_LIMIT", "25"))
 _SLEEP_BETWEEN = 60.0 / _RPM_LIMIT
 _MAX_RETRIES   = 3
+
+# API key path: Google AI Studio endpoint
+_GEMINI_AI_STUDIO_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+# Service account path: Vertex AI endpoint (v1 works for gemini-2.5-flash)
+_GEMINI_VERTEX_URL = "https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/us-central1/publishers/google/models/{model}:generateContent"
+
+_DEFAULT_CRED_PATH = str(Path(__file__).parent.parent.parent / "cred.json")
 
 _SYSTEM_PROMPT = """You are a headline writer and classifier for Hirist and IIMJobs — India's top platforms for tech professionals. Your readers are engineers, data/ML folks, and tech leaders who scroll fast and only stop when a headline earns it.
 
@@ -160,33 +165,78 @@ Output:
 === OUTPUT ===
 Output ONLY valid JSON — no markdown fences, no explanation, no trailing commas. Exactly:
 {"ai_title": "...", "ai_summary": "...", "vertical": "...", "hiring_relevant": true}"""
+
+
 # ---------------------------------------------------------------------------
-# Groq client — initialised once, lazily
+# Auth helpers — build an httpx.Client with the right auth header
 # ---------------------------------------------------------------------------
 
-_client = None
+_http_client: httpx.Client | None = None
 _client_lock = threading.Lock()
 
 
-def _get_client():
-    global _client
-    if _client is not None:
-        return _client
+_vertex_project: str = ""  # populated when using service account
+
+
+def _build_http_client() -> httpx.Client | None:
+    """Return a shared httpx.Client with Gemini auth pre-wired."""
+    global _vertex_project
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key:
+        client = httpx.Client(params={"key": api_key}, timeout=30)
+        logger.info("Gemini auth: API key (model: %s)", _MODEL)
+        return client
+
+    # Service account → Vertex AI with bearer token
+    cred_path = os.getenv("GOOGLE_CRED_PATH", _DEFAULT_CRED_PATH)
+    if not Path(cred_path).exists():
+        logger.warning(
+            "GEMINI_API_KEY not set and no cred file at %s — enrichment disabled",
+            cred_path,
+        )
+        return None
+
+    try:
+        from google.oauth2 import service_account
+        import google.auth.transport.requests as ga_requests
+
+        with open(cred_path) as f:
+            _vertex_project = json.load(f).get("project_id", "")
+
+        credentials = service_account.Credentials.from_service_account_file(
+            cred_path,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        credentials.refresh(ga_requests.Request())
+
+        class _BearerAuth(httpx.Auth):
+            def __init__(self, creds):
+                self._creds = creds
+
+            def auth_flow(self, request):
+                if not self._creds.valid:
+                    self._creds.refresh(ga_requests.Request())
+                request.headers["Authorization"] = f"Bearer {self._creds.token}"
+                yield request
+
+        client = httpx.Client(auth=_BearerAuth(credentials), timeout=60)
+        logger.info("Gemini auth: Vertex AI service account (project: %s, model: %s)", _vertex_project, _MODEL)
+        return client
+    except Exception as e:
+        logger.error("Failed to initialise Gemini auth: %s", e)
+        return None
+
+
+def _get_http_client() -> httpx.Client | None:
+    global _http_client
+    if _http_client is not None:
+        return _http_client
     with _client_lock:
-        if _client is not None:
-            return _client
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            logger.warning("GROQ_API_KEY not set — enrichment disabled")
-            return None
-        try:
-            from groq import Groq
-            _client = Groq(api_key=api_key)
-            logger.info("Groq client initialised (model: %s)", _MODEL)
-        except Exception as e:
-            logger.error("Failed to initialise Groq client: %s", e)
-            return None
-    return _client
+        if _http_client is not None:
+            return _http_client
+        _http_client = _build_http_client()
+    return _http_client
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +281,6 @@ def _parse_json(raw: str) -> dict | None:
 
 # ---------------------------------------------------------------------------
 # Article content fetcher
-# httpx handles the request (proper UA, redirects); trafilatura does extraction.
 # ---------------------------------------------------------------------------
 
 _FETCH_HEADERS = {
@@ -243,10 +292,9 @@ _FETCH_HEADERS = {
 
 def _fetch_content(url: str) -> str | None:
     if "youtube.com" in url or "youtu.be" in url:
-        return None  # JS-rendered, RSS summary is better
+        return None
     try:
         import trafilatura
-        import httpx
         r = httpx.get(url, headers=_FETCH_HEADERS, timeout=8, follow_redirects=True)
         r.raise_for_status()
         text = trafilatura.extract(
@@ -263,17 +311,32 @@ def _fetch_content(url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Core enrichment call — with exponential backoff retry
+# Core enrichment call
 # ---------------------------------------------------------------------------
 
 _VALID_VERTICALS = frozenset([
     "Hiring", "Layoffs", "Funding", "AI", "Tech", "Blogs", "Market Trends", "Youtube",
 ])
-# case-insensitive lookup → canonical form
 _VERTICAL_MAP = {v.lower(): v for v in _VALID_VERTICALS}
 
 
-def _enrich_one(client, title: str, url: str, existing_summary: str | None, source_name: str = "") -> tuple[str, str, str, bool] | None:
+def _call_gemini(client: httpx.Client, user_msg: str) -> str | None:
+    payload = {
+        "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
+        "contents": [{"role": "user", "parts": [{"text": user_msg}]}],
+        "generationConfig": {"temperature": 0.6, "maxOutputTokens": 2048, "thinkingConfig": {"thinkingBudget": 0}},
+    }
+    if _vertex_project:
+        url = _GEMINI_VERTEX_URL.format(project=_vertex_project, model=_MODEL)
+    else:
+        url = _GEMINI_AI_STUDIO_URL.format(model=_MODEL)
+    resp = client.post(url, json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def _enrich_one(client: httpx.Client, title: str, url: str, existing_summary: str | None, source_name: str = "") -> tuple[str, str, str, bool] | None:
     content = _fetch_content(url)
 
     source_line = f"Source: {source_name}\n" if source_name else ""
@@ -284,29 +347,17 @@ def _enrich_one(client, title: str, url: str, existing_summary: str | None, sour
     else:
         user_msg = f"{source_line}Title: {title}"
 
-    messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": user_msg},
-    ]
-
     last_err = None
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
-            response = client.chat.completions.create(
-                model=_MODEL,
-                messages=messages,
-                temperature=0.6,
-                max_tokens=512,
-            )
-            raw = response.choices[0].message.content or ""
+            raw = _call_gemini(client, user_msg) or ""
             parsed = _parse_json(raw)
-            if parsed and parsed.get("ai_title") and parsed.get("ai_summary"):
+            if parsed and parsed.get("ai_title"):
                 vertical = _VERTICAL_MAP.get(parsed.get("vertical", "").strip().lower(), "Market Trends")
                 hiring_relevant = bool(parsed.get("hiring_relevant", False))
-                return parsed["ai_title"].strip(), parsed["ai_summary"].strip(), vertical, hiring_relevant
-            # Bad format — add a stricter retry message
-            messages.append({"role": "assistant", "content": raw})
-            messages.append({"role": "user", "content": "CRITICAL: Return ONLY valid JSON with keys ai_title, ai_summary, and vertical. No markdown, no extra text."})
+                ai_summary = (parsed.get("ai_summary") or "").strip()
+                return parsed["ai_title"].strip(), ai_summary, vertical, hiring_relevant
+            user_msg += "\n\nCRITICAL: Return ONLY valid JSON with keys ai_title, ai_summary, vertical, hiring_relevant. No markdown."
         except Exception as e:
             last_err = e
             if attempt < _MAX_RETRIES:
@@ -324,7 +375,7 @@ def enrich_batch(article_ids: list[int]) -> None:
     from app.database import SessionLocal
     from app.models import Article
 
-    client = _get_client()
+    client = _get_http_client()
     if not client:
         return
 
@@ -375,7 +426,9 @@ def enrich_pending(limit: int = 50) -> None:
 
 def enrich_batch_async(article_ids: list[int]) -> None:
     """Fire-and-forget: spawn a background thread to enrich the given IDs."""
-    if not article_ids or not os.getenv("GROQ_API_KEY"):
+    has_api_key = bool(os.getenv("GEMINI_API_KEY"))
+    has_cred = Path(os.getenv("GOOGLE_CRED_PATH", _DEFAULT_CRED_PATH)).exists()
+    if not article_ids or (not has_api_key and not has_cred):
         return
     t = threading.Thread(target=enrich_batch, args=(article_ids,), daemon=True)
     t.start()

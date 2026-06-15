@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
     CACHE_TTL: int = 300
     INGEST_INTERVAL_SECONDS: int = 300
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GOOGLE_CRED_PATH: str = ""
 
     HN_ITEM_URL: str = "https://hacker-news.firebaseio.com/v0/item/{id}.json"
     HN_FETCH_LIMIT: int = 80
