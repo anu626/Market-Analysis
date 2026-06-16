@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from rapidfuzz import fuzz as _fuzz
 from sqlalchemy import case, func, or_, and_
 from sqlalchemy.orm import Session
 
@@ -25,12 +26,18 @@ def _resolve_ai_image(ai_image_url: str | None, base_url: str) -> str | None:
     return f"{base_url.rstrip('/')}{ai_image_url}"
 
 
+_DISPLAY_DEDUP_THRESHOLD = 80  # token_set_ratio threshold for same-story fuzzy grouping
+
+
 def _dedup_by_story(rows: list, offset: int, limit: int, base_url: str = "") -> list[dict]:
     """Deduplicate articles sharing the same story_hash, keeping the top-ranked.
+    A fuzzy second pass merges groups whose representative titles are similar enough
+    to be the same story reported differently across sources.
     Returns dicts with an injected source_count and source_logo field."""
     logos = get_logo_map()
-    seen: dict[str, dict] = {}  # story_hash -> best article dict
+    seen: dict[str, dict] = {}   # story_hash -> best article dict
     counts: dict[str, set] = {}  # story_hash -> set of source_names
+    titles: dict[str, str] = {}  # story_hash -> title for fuzzy second pass
 
     for r in rows:
         key = r.story_hash or str(r.id)
@@ -40,11 +47,30 @@ def _dedup_by_story(rows: list, offset: int, limit: int, base_url: str = "") -> 
         if key not in seen:
             seen[key] = d
             counts[key] = {r.source_name}
+            titles[key] = (r.ai_title or r.title or "").lower()
         else:
             counts[key].add(r.source_name)
 
+    # Second pass: merge groups whose representative titles are fuzzy-similar.
+    # Catches same-story articles that got different story_hashes due to title phrasing.
+    keys = list(seen.keys())
+    absorbed: set[str] = set()
+    for i in range(len(keys)):
+        ki = keys[i]
+        if ki in absorbed:
+            continue
+        for j in range(i + 1, len(keys)):
+            kj = keys[j]
+            if kj in absorbed:
+                continue
+            if _fuzz.token_set_ratio(titles[ki], titles[kj]) >= _DISPLAY_DEDUP_THRESHOLD:
+                counts[ki].update(counts[kj])
+                absorbed.add(kj)
+
     result = []
     for key, article in seen.items():
+        if key in absorbed:
+            continue
         article["source_count"] = len(counts[key])
         result.append(article)
 

@@ -62,9 +62,15 @@ def _load_source_config() -> tuple[dict, set]:
 
 
 def story_hash(title: str) -> str:
-    """12-char hex hash of the top 5 title keywords (order-insensitive)."""
+    """12-char hex hash of the top 5 title keywords (order-insensitive).
+    Sorts by length descending so entity-specific words (company names, tech terms)
+    rank ahead of short generic words. Pure numbers are excluded since the same story
+    may cite different figures across sources."""
     words = re.sub(r"[^a-z0-9\s]", "", title.lower()).split()
-    keywords = sorted(w for w in words if w not in _STOPWORDS and len(w) > 2)[:5]
+    keywords = sorted(
+        (w for w in words if w not in _STOPWORDS and len(w) > 2 and not w.isdigit()),
+        key=lambda w: (-len(w), w),
+    )[:5]
     return hashlib.md5(" ".join(keywords).encode()).hexdigest()[:12]
 
 

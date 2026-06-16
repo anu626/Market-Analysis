@@ -59,3 +59,6 @@ def _migrate(eng):
         if "image_url" not in existing:
             conn.execute(text("ALTER TABLE articles ADD COLUMN image_url VARCHAR(1024)"))
             conn.commit()
+        if "ai_image_url" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN ai_image_url VARCHAR(1024)"))
+            conn.commit()
