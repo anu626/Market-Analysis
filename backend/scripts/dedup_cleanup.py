@@ -34,7 +34,10 @@ from datetime import datetime, timedelta
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rapidfuzz import fuzz
+try:
+    from rapidfuzz import fuzz
+except ImportError:
+    sys.exit("rapidfuzz is not installed. Run: pip install rapidfuzz==3.9.3")
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
