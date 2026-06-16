@@ -347,3 +347,35 @@ def trigger_rerank(db: Session = Depends(get_db)):
     n = recompute_all(db)
     cache_delete_prefix("articles:")
     return {"reranked": n}
+
+
+@router.post("/generate-images")
+def trigger_image_generation(
+    limit: int = Query(50, ge=1, le=200, description="Max articles to generate images for"),
+    vertical: str | None = Query(None, description="Filter by vertical e.g. Layoffs, Hiring, AI"),
+    db: Session = Depends(get_db),
+):
+    """Generate AI infographic images for articles that have no image_url. Manual trigger only."""
+    from app.enrichment.enricher import _generate_article_image
+
+    query = db.query(Article).filter(Article.image_url.is_(None))
+    if vertical:
+        query = query.filter(Article.vertical == vertical)
+    articles = query.order_by(Article.rank_score.desc()).limit(limit).all()
+
+    generated, failed = 0, 0
+    for article in articles:
+        url = _generate_article_image(
+            article.id,
+            article.ai_title or article.title,
+            article.vertical or "Tech",
+        )
+        if url:
+            article.image_url = url
+            db.commit()
+            generated += 1
+        else:
+            failed += 1
+
+    cache_delete_prefix("articles:")
+    return {"generated": generated, "failed": failed, "total": len(articles)}

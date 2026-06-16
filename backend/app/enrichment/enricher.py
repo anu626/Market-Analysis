@@ -22,10 +22,12 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_MODEL         = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-_RPM_LIMIT     = int(os.getenv("ENRICH_RPM_LIMIT", "25"))
-_SLEEP_BETWEEN = 60.0 / _RPM_LIMIT
-_MAX_RETRIES   = 3
+_MODEL            = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+_RPM_LIMIT        = int(os.getenv("ENRICH_RPM_LIMIT", "25"))
+_SLEEP_BETWEEN    = 60.0 / _RPM_LIMIT
+_MAX_RETRIES      = 3
+_GENERATE_IMAGES  = os.getenv("ENRICH_GENERATE_IMAGES", "false").lower() == "true"
+_IMAGE_MODEL      = "imagen-3.0-fast-generate-001"
 
 # API key path: Google AI Studio endpoint
 _GEMINI_AI_STUDIO_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -290,6 +292,198 @@ _FETCH_HEADERS = {
 }
 
 
+_VERTICAL_IMAGE_THEMES = {
+    "Layoffs":       "corporate office empty desks, downsizing, professional workplace",
+    "Hiring":        "job interview, career growth, recruitment, professional handshake",
+    "AI":            "artificial intelligence, neural network visualization, futuristic technology",
+    "Funding":       "startup investment, venture capital, business growth charts",
+    "Tech":          "software development, coding on laptop, modern technology",
+    "Blogs":         "technology writing, engineering team, software architecture",
+    "Market Trends": "business analytics, stock market, economy data visualization",
+    "Youtube":       "video content creation, camera, social media",
+}
+
+_VERTICAL_ACCENT_COLORS = {
+    "Layoffs":       (220, 53,  69),
+    "Hiring":        (40,  167, 69),
+    "AI":            (111, 66,  193),
+    "Funding":       (255, 152, 0),
+    "Tech":          (13,  110, 253),
+    "Blogs":         (32,  201, 151),
+    "Market Trends": (108, 117, 125),
+    "Youtube":       (255, 0,   0),
+}
+
+
+def _make_catchphrase(client, title: str, vertical: str) -> str:
+    """Use Gemini to distill the title into a short 4-6 word punchy phrase."""
+    try:
+        prompt = (
+            f"News headline: \"{title}\"\n\n"
+            "Write a SHORT, punchy 4-6 word phrase that captures the core impact of this story. "
+            "Think magazine cover copy — bold, urgent, vivid. "
+            "Title Case. No punctuation at the end. Return ONLY the phrase, nothing else."
+        )
+        raw = _call_gemini(client, prompt) or ""
+        phrase = raw.strip().strip('"').strip("'").strip()
+        if phrase and len(phrase) < 80:
+            return phrase
+    except Exception:
+        pass
+    # Fallback: use first 6 words of title
+    words = title.split()
+    return " ".join(words[:6]) + ("…" if len(words) > 6 else "")
+
+
+def _overlay_headline(img_bytes: bytes, phrase: str, vertical: str) -> bytes:
+    """Overlay a short phrase centered on the image with a clean dark vignette. Returns PNG bytes."""
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    import io
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+    W, H = img.size
+
+    # Subtle radial-style vignette: darken edges, darkest center-bottom
+    vignette = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    vdraw = ImageDraw.Draw(vignette)
+    # Uniform semi-dark overlay so text is readable anywhere
+    vdraw.rectangle([(0, 0), (W, H)], fill=(0, 0, 0, 110))
+    # Extra darkening toward center-vertical for text contrast
+    cx, cy = W // 2, H // 2
+    for r in range(min(cx, cy), 0, -8):
+        alpha = int(60 * (1 - r / min(cx, cy)))
+        vdraw.ellipse([(cx - r, cy - r), (cx + r, cy + r)], fill=(0, 0, 0, alpha))
+
+    img = Image.alpha_composite(img, vignette)
+    draw = ImageDraw.Draw(img)
+
+    # Load font
+    font_large = font_small = None
+    for font_path in [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    ]:
+        if Path(font_path).exists():
+            font_large = ImageFont.truetype(font_path, size=max(40, H // 12))
+            font_small = ImageFont.truetype(font_path, size=max(20, H // 28))
+            break
+
+    accent = _VERTICAL_ACCENT_COLORS.get(vertical, (255, 255, 255))
+
+    # Wrap phrase to max 2 lines centered
+    margin = int(W * 0.10)
+    max_w = W - margin * 2
+    words = phrase.split()
+    lines, line = [], []
+    for word in words:
+        test = " ".join(line + [word])
+        tw = draw.textlength(test, font=font_large) if font_large else len(test) * 20
+        if tw <= max_w:
+            line.append(word)
+        else:
+            if line:
+                lines.append(" ".join(line))
+            line = [word]
+        if len(lines) >= 2:
+            break
+    if line and len(lines) < 2:
+        lines.append(" ".join(line))
+
+    line_h = (font_large.size if font_large else 44) + 12
+    text_block_h = len(lines) * line_h
+    ty = (H - text_block_h) // 2 - line_h // 4  # slightly above center
+
+    # Accent line above text
+    line_y = ty - 20
+    line_x1 = W // 2 - 40
+    line_x2 = W // 2 + 40
+    draw.rectangle([(line_x1, line_y), (line_x2, line_y + 4)], fill=(*accent, 255))
+
+    # Text centered with multi-layer shadow for depth
+    for i, ln in enumerate(lines):
+        y = ty + i * line_h
+        tw = draw.textlength(ln, font=font_large) if font_large else len(ln) * 20
+        x = (W - tw) // 2
+        for dx, dy, alpha in [(3, 3, 120), (1, 1, 80)]:
+            draw.text((x + dx, y + dy), ln, fill=(0, 0, 0, alpha), font=font_large)
+        draw.text((x, y), ln, fill=(255, 255, 255, 255), font=font_large)
+
+    # Accent line below text
+    below_y = ty + text_block_h + 16
+    draw.rectangle([(line_x1, below_y), (line_x2, below_y + 4)], fill=(*accent, 255))
+
+    # Subtle vertical label bottom-right
+    label = vertical.upper()
+    lw = draw.textlength(label, font=font_small) if font_small else len(label) * 10
+    draw.text((W - lw - 20, H - (font_small.size if font_small else 22) - 16), label,
+              fill=(*accent, 200), font=font_small)
+
+    out = io.BytesIO()
+    img.convert("RGB").save(out, format="PNG", optimize=True)
+    return out.getvalue()
+
+
+def _generate_article_image(article_id: int, title: str, vertical: str) -> str | None:
+    """Generate a Gemini Imagen background, overlay headline, save to static/ai-images/."""
+    if not _GENERATE_IMAGES:
+        return None
+
+    # Call _get_http_client() first — this populates _vertex_project as a side effect
+    client = _get_http_client()
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    theme = _VERTICAL_IMAGE_THEMES.get(vertical, "technology, business, innovation")
+    prompt = (
+        f"Editorial news photograph. Visual themes: {theme}. "
+        "Wide shot, clean professional composition, photorealistic, "
+        "no text, no watermarks, no logos, no people's faces."
+    )
+
+    try:
+        if api_key:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{_IMAGE_MODEL}:predict?key={api_key}"
+            resp = httpx.post(url, json={
+                "instances": [{"prompt": prompt}],
+                "parameters": {"sampleCount": 1, "aspectRatio": "16:9"},
+            }, timeout=30)
+        elif client and _vertex_project:
+            url = (
+                f"https://us-central1-aiplatform.googleapis.com/v1/projects/{_vertex_project}"
+                f"/locations/us-central1/publishers/google/models/{_IMAGE_MODEL}:predict"
+            )
+            resp = client.post(url, json={
+                "instances": [{"prompt": prompt}],
+                "parameters": {"sampleCount": 1, "aspectRatio": "16:9"},
+            })
+        else:
+            logger.warning("Image generation skipped: no API key and no Vertex project")
+            return None
+
+        resp.raise_for_status()
+        prediction = resp.json().get("predictions", [{}])[0]
+        b64 = prediction.get("bytesBase64Encoded")
+        if not b64:
+            logger.warning("No image bytes in Imagen response for article %d: %s", article_id, resp.text[:200])
+            return None
+
+        import base64
+        raw_bytes = base64.b64decode(b64)
+        phrase = _make_catchphrase(client, title, vertical)
+        logger.info("Catchphrase for article %d: %s", article_id, phrase)
+        infographic_bytes = _overlay_headline(raw_bytes, phrase, vertical)
+
+        out_dir = Path(__file__).parent.parent / "static" / "ai-images"
+        out_dir.mkdir(exist_ok=True)
+        img_path = out_dir / f"{article_id}.png"
+        img_path.write_bytes(infographic_bytes)
+        logger.info("Generated infographic for article %d -> %s", article_id, img_path.name)
+        return f"/static/ai-images/{article_id}.png"
+    except Exception as e:
+        logger.warning("Image generation failed for article %d: %s", article_id, e)
+        return None
+
+
 def _fetch_content(url: str) -> tuple[str | None, str | None]:
     """Returns (text_content, og_image_url)."""
     if "youtube.com" in url or "youtu.be" in url:
@@ -403,6 +597,12 @@ def enrich_batch(article_ids: list[int]) -> None:
                 article.ai_title, article.ai_summary, article.vertical, article.hiring_relevant, og_image = result
                 if og_image and not article.image_url:
                     article.image_url = og_image
+            if not article.image_url:
+                article.image_url = _generate_article_image(
+                    article.id,
+                    article.ai_title or article.title,
+                    article.vertical or "Tech",
+                )
             article.ai_enriched_at = now
             db.commit()
             logger.info("Enriched [%d] %s", article.id, article.ai_title or article.title)
