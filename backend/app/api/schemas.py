@@ -16,6 +16,7 @@ class ArticleOut(BaseModel):
     rank_score: float
     vertical: str = "tech"
     source_count: int = 1
+    sources: list[dict] = []
     ai_title: str | None = None
     ai_summary: str | None = None
     hiring_relevant: bool = False

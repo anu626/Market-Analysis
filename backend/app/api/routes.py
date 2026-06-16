@@ -29,15 +29,19 @@ def _resolve_ai_image(ai_image_url: str | None, base_url: str) -> str | None:
 _DISPLAY_DEDUP_THRESHOLD = 80  # token_set_ratio threshold for same-story fuzzy grouping
 
 
+def _source_entry(name: str, logos: dict) -> dict:
+    return {"name": name, "logo": logos.get(name)}
+
+
 def _dedup_by_story(rows: list, offset: int, limit: int, base_url: str = "") -> list[dict]:
     """Deduplicate articles sharing the same story_hash, keeping the top-ranked.
     A fuzzy second pass merges groups whose representative titles are similar enough
     to be the same story reported differently across sources.
     Returns dicts with an injected source_count and source_logo field."""
     logos = get_logo_map()
-    seen: dict[str, dict] = {}   # story_hash -> best article dict
-    counts: dict[str, set] = {}  # story_hash -> set of source_names
-    titles: dict[str, str] = {}  # story_hash -> title for fuzzy second pass
+    seen: dict[str, dict] = {}         # story_hash -> best article dict
+    sources: dict[str, dict] = {}      # story_hash -> {source_name: logo}
+    titles: dict[str, str] = {}        # story_hash -> title for fuzzy second pass
 
     for r in rows:
         key = r.story_hash or str(r.id)
@@ -46,10 +50,10 @@ def _dedup_by_story(rows: list, offset: int, limit: int, base_url: str = "") -> 
         d["ai_image_url"] = _resolve_ai_image(d.get("ai_image_url"), base_url)
         if key not in seen:
             seen[key] = d
-            counts[key] = {r.source_name}
+            sources[key] = {r.source_name: logos.get(r.source_name)}
             titles[key] = (r.ai_title or r.title or "").lower()
         else:
-            counts[key].add(r.source_name)
+            sources[key].setdefault(r.source_name, logos.get(r.source_name))
 
     # Second pass: merge groups whose representative titles are fuzzy-similar.
     # Catches same-story articles that got different story_hashes due to title phrasing.
@@ -64,14 +68,18 @@ def _dedup_by_story(rows: list, offset: int, limit: int, base_url: str = "") -> 
             if kj in absorbed:
                 continue
             if _fuzz.token_set_ratio(titles[ki], titles[kj]) >= _DISPLAY_DEDUP_THRESHOLD:
-                counts[ki].update(counts[kj])
+                sources[ki].update(sources[kj])
                 absorbed.add(kj)
 
     result = []
     for key, article in seen.items():
         if key in absorbed:
             continue
-        article["source_count"] = len(counts[key])
+        src_map = sources[key]
+        article["source_count"] = len(src_map)
+        article["sources"] = [
+            {"name": name, "logo": logo} for name, logo in src_map.items()
+        ]
         result.append(article)
 
     return result[offset: offset + limit]
@@ -215,6 +223,7 @@ def latest_articles(
     for r in rows:
         d = ArticleOut.model_validate(r).model_dump()
         d["source_logo"] = logos.get(r.source_name)
+        d["sources"] = [_source_entry(r.source_name, logos)]
         payload.append(d)
     cache_set(cache_key, payload)
     return payload
@@ -270,6 +279,7 @@ def vertical_digest(
     for r in best:
         d = ArticleOut.model_validate(r).model_dump()
         d["source_logo"] = logos.get(r.source_name)
+        d["sources"] = [_source_entry(r.source_name, logos)]
         payload.append(d)
 
     cache_set(cache_key, payload)
@@ -358,6 +368,7 @@ def articles_with_ai_images(
         d = ArticleOut.model_validate(r).model_dump()
         d["source_logo"] = logos.get(r.source_name)
         d["ai_image_url"] = _resolve_ai_image(d.get("ai_image_url"), base_url)
+        d["sources"] = [_source_entry(r.source_name, logos)]
         payload.append(d)
     return payload
 
@@ -367,8 +378,10 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
     row = db.get(Article, article_id)
     if not row:
         raise HTTPException(status_code=404, detail="Article not found")
+    logos = get_logo_map()
     d = ArticleOut.model_validate(row).model_dump()
-    d["source_logo"] = get_logo_map().get(row.source_name)
+    d["source_logo"] = logos.get(row.source_name)
+    d["sources"] = [_source_entry(row.source_name, logos)]
     return d
 
 
