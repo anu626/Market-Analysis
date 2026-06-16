@@ -9,7 +9,7 @@ import yaml
 _YAML_PATH = Path(__file__).parent.parent / "config" / "sources.yaml"
 
 CATEGORY_TO_VERTICAL: dict[str, str] = {
-    "recruitment": "recruitment",
+    "recruitment": "Hiring",
     "hiring": "Hiring",
     "layoffs": "Layoffs",
     "funding": "Funding",

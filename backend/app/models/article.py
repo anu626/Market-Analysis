@@ -48,6 +48,7 @@ class Article(Base):
     ai_summary = Column(Text, nullable=True)
     ai_enriched_at = Column(DateTime, nullable=True)
     hiring_relevant = Column(Boolean, default=False, nullable=False)
+    image_url = Column(String(1024), nullable=True)
 
     source = relationship("Source", back_populates="articles")
 

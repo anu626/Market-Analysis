@@ -102,6 +102,16 @@ def _apply_search(q, search: str | None):
     return q.filter(or_(Article.title.ilike(pattern), Article.summary.ilike(pattern)))
 
 
+def _quality_order():
+    """Sort: fully enriched with image first, then enriched, then raw."""
+    return case(
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None) & Article.image_url.isnot(None), 0),
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 1),
+        (Article.ai_title.isnot(None), 2),
+        else_=3,
+    )
+
+
 @router.get("/articles", response_model=list[ArticleOut])
 def list_articles(
     db: Session = Depends(get_db),
@@ -121,11 +131,7 @@ def list_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
-    ai_priority = case(
-        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
-        (Article.ai_title.isnot(None), 1),
-        else_=2,
-    )
+    ai_priority = _quality_order()
     # Fetch extra rows so dedup still fills the requested page after collapsing same-story articles
     rows = (
         query.order_by(ai_priority, Article.rank_score.desc())
@@ -156,11 +162,7 @@ def latest_articles(
         query = query.filter(Article.source_name == source)
     query = _apply_vertical(query, vertical)
     query = _apply_search(query, q)
-    ai_priority = case(
-        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
-        (Article.ai_title.isnot(None), 1),
-        else_=2,
-    )
+    ai_priority = _quality_order()
     rows = (
         query.order_by(ai_priority, Article.created_at.desc())
         .offset(offset)
@@ -193,26 +195,34 @@ def vertical_digest(
 
     logos = get_logo_map()
 
-    ai_priority = case(
-        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
-        (Article.ai_title.isnot(None), 1),
-        else_=2,
-    )
+    ai_priority = _quality_order()
 
-    # One best enriched article per canonical vertical — different vertical each time
+    # One best enriched article per canonical vertical — prefer articles with image
     best: list[Article] = []
     for vertical in _CANONICAL_VERTICALS:
         top = (
             db.query(Article)
-            .filter(Article.vertical == vertical)
+            .filter(Article.vertical == vertical, Article.image_url.isnot(None))
             .order_by(ai_priority, Article.rank_score.desc())
             .first()
         )
+        if not top:
+            top = (
+                db.query(Article)
+                .filter(Article.vertical == vertical)
+                .order_by(ai_priority, Article.rank_score.desc())
+                .first()
+            )
         if top:
             best.append(top)
 
-    # Sort final set: enriched first, then by rank_score, return top x
-    best.sort(key=lambda a: (0 if (a.ai_title and a.ai_summary) else (1 if a.ai_title else 2), -a.rank_score))
+    # Sort final set: image+enriched first, then by rank_score, return top x
+    best.sort(key=lambda a: (
+        0 if (a.ai_title and a.ai_summary and a.image_url) else
+        1 if (a.ai_title and a.ai_summary) else
+        2 if a.ai_title else 3,
+        -a.rank_score
+    ))
     best = best[:x]
 
     payload = []
@@ -250,11 +260,7 @@ def articles_by_category(
     query = db.query(Article).filter(Article.vertical == mapped_vertical)
     query = _apply_search(query, q)
 
-    ai_priority = case(
-        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
-        (Article.ai_title.isnot(None), 1),
-        else_=2,
-    )
+    ai_priority = _quality_order()
     order = Article.rank_score.desc() if sort == "ranked" else Article.created_at.desc()
 
     # For recruitment: surface purely hiring-focused articles first

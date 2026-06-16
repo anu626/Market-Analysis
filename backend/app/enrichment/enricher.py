@@ -290,24 +290,34 @@ _FETCH_HEADERS = {
 }
 
 
-def _fetch_content(url: str) -> str | None:
+def _fetch_content(url: str) -> tuple[str | None, str | None]:
+    """Returns (text_content, og_image_url)."""
     if "youtube.com" in url or "youtu.be" in url:
-        return None
+        return None, None
     try:
+        import re as _re
         import trafilatura
         r = httpx.get(url, headers=_FETCH_HEADERS, timeout=8, follow_redirects=True)
         r.raise_for_status()
+
+        # Extract og:image from raw HTML
+        og_image = None
+        m = _re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', r.text, _re.IGNORECASE)
+        if not m:
+            m = _re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', r.text, _re.IGNORECASE)
+        if m:
+            og_image = m.group(1).strip()
+
         text = trafilatura.extract(
             r.text,
             include_comments=False,
             include_tables=False,
             no_fallback=False,
         )
-        if text and len(text) > 100:
-            return text[:3000]
+        return (text[:3000] if text and len(text) > 100 else None), og_image
     except Exception as e:
         logger.debug("Content fetch failed for %s: %s", url, e)
-    return None
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -336,8 +346,8 @@ def _call_gemini(client: httpx.Client, user_msg: str) -> str | None:
     return data["candidates"][0]["content"]["parts"][0]["text"]
 
 
-def _enrich_one(client: httpx.Client, title: str, url: str, existing_summary: str | None, source_name: str = "") -> tuple[str, str, str, bool] | None:
-    content = _fetch_content(url)
+def _enrich_one(client: httpx.Client, title: str, url: str, existing_summary: str | None, source_name: str = "") -> tuple[str, str, str, bool, str | None] | None:
+    content, og_image = _fetch_content(url)
 
     source_line = f"Source: {source_name}\n" if source_name else ""
     if content:
@@ -356,7 +366,7 @@ def _enrich_one(client: httpx.Client, title: str, url: str, existing_summary: st
                 vertical = _VERTICAL_MAP.get(parsed.get("vertical", "").strip().lower(), "Market Trends")
                 hiring_relevant = bool(parsed.get("hiring_relevant", False))
                 ai_summary = (parsed.get("ai_summary") or "").strip()
-                return parsed["ai_title"].strip(), ai_summary, vertical, hiring_relevant
+                return parsed["ai_title"].strip(), ai_summary, vertical, hiring_relevant, og_image
             user_msg += "\n\nCRITICAL: Return ONLY valid JSON with keys ai_title, ai_summary, vertical, hiring_relevant. No markdown."
         except Exception as e:
             last_err = e
@@ -390,7 +400,9 @@ def enrich_batch(article_ids: list[int]) -> None:
             result = _enrich_one(client, article.title, article.url, article.summary, article.source_name or "")
             now = datetime.now(timezone.utc).replace(tzinfo=None)
             if result:
-                article.ai_title, article.ai_summary, article.vertical, article.hiring_relevant = result
+                article.ai_title, article.ai_summary, article.vertical, article.hiring_relevant, og_image = result
+                if og_image and not article.image_url:
+                    article.image_url = og_image
             article.ai_enriched_at = now
             db.commit()
             logger.info("Enriched [%d] %s", article.id, article.ai_title or article.title)

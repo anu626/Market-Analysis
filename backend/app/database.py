@@ -56,3 +56,6 @@ def _migrate(eng):
         if "hiring_relevant" not in existing:
             conn.execute(text("ALTER TABLE articles ADD COLUMN hiring_relevant BOOLEAN NOT NULL DEFAULT 0"))
             conn.commit()
+        if "image_url" not in existing:
+            conn.execute(text("ALTER TABLE articles ADD COLUMN image_url VARCHAR(1024)"))
+            conn.commit()
