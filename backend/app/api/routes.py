@@ -12,11 +12,16 @@ from app.services.ingestion_service import run_full_ingestion, run_vertical_inge
 
 
 
+_S3_BASE = "https://qahiristmedia.s3.ap-south-1.amazonaws.com"
+
+
 def _resolve_ai_image(ai_image_url: str | None, base_url: str) -> str | None:
     if not ai_image_url:
         return None
     if ai_image_url.startswith("http"):
         return ai_image_url
+    if ai_image_url.startswith("/static/ai-images/"):
+        return ai_image_url.replace("/static/ai-images/", f"{_S3_BASE}/ai-images/")
     return f"{base_url.rstrip('/')}{ai_image_url}"
 
 
