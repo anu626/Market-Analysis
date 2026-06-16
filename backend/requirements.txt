@@ -18,3 +18,4 @@ trafilatura==2.0.0
 lxml_html_clean>=0.4.0
 playwright>=1.44.0
 Pillow>=10.0.0
+boto3

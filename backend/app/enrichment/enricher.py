@@ -29,6 +29,12 @@ _MAX_RETRIES      = 3
 _GENERATE_IMAGES  = os.getenv("ENRICH_GENERATE_IMAGES", "false").lower() == "true"
 _IMAGE_MODEL      = "imagen-3.0-fast-generate-001"
 
+# S3 config for ai-images
+_S3_BUCKET        = os.getenv("AWS_S3_BUCKET", "qahiristmedia")
+_S3_REGION        = os.getenv("AWS_S3_REGION", "ap-south-1")
+_S3_PREFIX        = "ai-images/"
+_S3_BASE_URL      = f"https://{_S3_BUCKET}.s3.{_S3_REGION}.amazonaws.com/"
+
 # API key path: Google AI Studio endpoint
 _GEMINI_AI_STUDIO_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 # Service account path: Vertex AI endpoint (v1 works for gemini-2.5-flash)
@@ -292,15 +298,183 @@ _FETCH_HEADERS = {
 }
 
 
-_VERTICAL_IMAGE_THEMES = {
-    "Layoffs":       "corporate office empty desks, downsizing, professional workplace",
-    "Hiring":        "job interview, career growth, recruitment, professional handshake",
-    "AI":            "artificial intelligence, neural network visualization, futuristic technology",
-    "Funding":       "startup investment, venture capital, business growth charts",
-    "Tech":          "software development, coding on laptop, modern technology",
-    "Blogs":         "technology writing, engineering team, software architecture",
-    "Market Trends": "business analytics, stock market, economy data visualization",
-    "Youtube":       "video content creation, camera, social media",
+_VERTICAL_SCENE_VARIANTS: dict[str, list[str]] = {
+    "Layoffs": [
+        "Wide shot of an empty open-plan office with cleared desks and stacked cardboard boxes near the exit, harsh overhead fluorescent lighting",
+        "A single wilting plant left on an otherwise bare desk in a dim corporate office, chairs pushed in, no personal items remaining",
+        "Rows of disconnected monitors with tangled cables draped over vacated workstations in a large tech floor",
+        "A corporate security badge and expired access card lying on an empty desk under cool office lighting",
+        "A conference room with chairs pushed in neatly, whiteboard half-erased, lights switched off, blinds half-drawn",
+        "Corporate lobby wall with half-removed employee portrait photos, some frames still hanging crookedly",
+        "Aerial shot of a tech campus parking lot mostly empty on a weekday morning, only a few scattered cars",
+        "A stack of sealed manila envelopes on an HR desk, organised in rows, waiting to be distributed",
+        "Server room with decommissioned equipment racks, cables unplugged and hanging loose, dust on empty shelves",
+        "Employee notice board with all job postings torn down, only pushpin holes and torn paper corners remain",
+        "A coffee mug and a framed family photo left behind on an otherwise completely cleared office desk",
+        "Locked glass office doors with dim interiors visible through frosted panels, out-of-order sign taped to handle",
+        "A collection point desk stacked with returned company laptops in neat rows, a sign-off sheet on top",
+        "Empty canteen tables in a once-busy tech office cafeteria, trays stacked, chairs upturned, lights off at one end",
+        "Overhead aerial view of a corporate campus with most parking spots empty, a few cars clustered near one entrance",
+        "Moving boxes stacked in a corporate hallway beside a vacated team bay, desks already stripped of equipment",
+        "A severance letter on a polished desk next to a company laptop and ID badge, ready for return",
+        "Abandoned call centre floor with headsets hanging on empty chairs, screens dark, dead plants on partition tops",
+        "A departures board in a corporate atrium listing names and final dates, several entries highlighted",
+        "Exterior of a corporate tower at dusk with entire floors dark, only a few windows lit, subdued atmosphere",
+    ],
+    "Hiring": [
+        "A confident professional handshake across a modern glass desk in a bright, plant-filled office",
+        "Job fair with candidates in business attire browsing company booths, banner signage overhead",
+        "A candidate reviewing their resume on a tablet in a modern waiting room with other applicants seated",
+        "A recruiter reviewing a stack of printed CVs at a well-lit office desk, red pen in hand",
+        "Laptop screen showing a smiling remote candidate during a video interview, interviewer's hands visible",
+        "Campus recruitment drive with company banners and students filling a college auditorium, brochures on desks",
+        "A welcoming desk with a 'New Joiners' sign, gift bags and onboarding kits arranged neatly",
+        "A hiring manager writing a job offer letter with a fountain pen on company letterhead",
+        "HR dashboard on a wide monitor showing open positions, applicant pipeline, and department headcount",
+        "A bright modern office lobby where candidates sign in at a reception desk, lanyards ready",
+        "Aerial shot of a recruitment fair with long queues at major tech company booths inside a convention hall",
+        "A stack of white offer letter envelopes aligned on a desk, ready for dispatch, company logo embossed",
+        "New employee orientation — a group of hires in a circle with a facilitator, nametags and notebooks in hand",
+        "Close-up of a laptop showing a LinkedIn profile with connection requests from recruiters",
+        "A candidate shaking hands with a three-person interview panel in a formal glass-walled meeting room",
+        "University career centre with students lining up at placement desks, notice boards full of company flyers",
+        "A Bengaluru tech park entrance in morning light with job seekers arriving and checking their phones",
+        "HR professional adding a new role to a job board displayed on a large digital screen in a co-working space",
+        "Diverse group of new hires collaborating around a table during their first week, laptops and coffee cups",
+        "Two professionals across a table reviewing printed compensation packages during a salary negotiation",
+    ],
+    "AI": [
+        "Rows of glowing blue server racks stretching into the distance inside a dark hyperscale data centre",
+        "Abstract 3D neural network with thousands of interconnected luminous nodes floating in deep space",
+        "A robotic arm precisely placing microchips on a circuit board in a cleanroom under clinical white lighting",
+        "Lines of AI model output streaming on a dark terminal screen, green monospace text on black",
+        "A translucent holographic human brain made of light filaments suspended in a dark room",
+        "Aerial top-down view of a massive GPU cluster inside a data centre, symmetrical rows of hardware",
+        "Extreme macro close-up of a processor chip, golden circuitry reflecting dramatic side-lighting",
+        "A monitor displaying token-by-token text generation with probability scores highlighted alongside",
+        "Fibre-optic cables carrying pulses of coloured light through a long dark server corridor",
+        "Futuristic operations centre with curved screens showing AI inference dashboards and live model metrics",
+        "Frost-covered cooling pipes running along server racks, condensation visible in cold data centre air",
+        "Abstract digital particles gradually assembling into the outline of a brain in deep blue and violet tones",
+        "An AI chip wafer held under laboratory lighting, intricate circuit patterns refracting rainbow colours",
+        "Rows of specialised AI accelerator boards mounted in racks, status LEDs blinking in synchrony",
+        "A lone researcher's silhouette at a dark desk, face illuminated only by a monitor running model training",
+        "A 3D scatter plot of high-dimensional embeddings on a monitor, clusters colour-coded by category",
+        "A mechanical robotic hand reaching toward a softly glowing translucent sphere in a dark studio",
+        "Satellite dish array at night, pointing skyward, lit by moonlight and blue LED ground lighting",
+        "Motion-blur time-lapse of data flowing through transparent network cables, light pulses streaking",
+        "Macro photograph of a silicon wafer under diffused light, refracting an iridescent spectrum of colour",
+    ],
+    "Funding": [
+        "A venture capitalist signing a term sheet across a polished boardroom table, city skyline behind glass",
+        "A startup founder pitching on a spotlit stage to a dark auditorium full of attentive investors",
+        "Close-up of a monitor showing an exponential revenue growth bar chart with a cursor highlighting the peak",
+        "Two executives shaking hands at floor-to-ceiling glass windows, reflected city skyline between them",
+        "Stack of legal contracts and a fountain pen on a mahogany boardroom desk under warm lamp light",
+        "A whiteboard covered with a startup's business model canvas and funding milestone markers",
+        "Aerial shot of a modern tech campus expansion under active construction, cranes visible above roofline",
+        "Corporate lobby digital display showing a funding announcement, employees gathered around reading it",
+        "Two co-founders toasting with sparkling water in front of a whiteboard dense with financial projections",
+        "A pitch deck slide projected in a dark room, '$50M Series B' in large bold text lit from below",
+        "Investor portfolio dashboard on a curved ultrawide monitor, valuation and growth metrics filling the screen",
+        "A cheque being carefully signed in a formal financial meeting room, witness present across the table",
+        "A co-working space glass meeting room with investors leaning forward, listening to a founder present",
+        "IPO debut on a stock exchange ticker — green numbers, celebration confetti visible at the edge of frame",
+        "A startup office buzzing with energy post-announcement, team clustered around a printed press release",
+        "Lawyer and founder reviewing due diligence documents spread across a glass conference table",
+        "A post-funding strategy wall covered in sticky notes mapping go-to-market stages and hiring targets",
+        "Private equity firm entrance — frosted glass door with logo, city skyline reflected in the building facade",
+        "Aerial drone shot of a newly acquired headquarters building, company flag being raised at entrance",
+        "A financial term sheet covered in red-ink annotations under warm incandescent office lighting",
+    ],
+    "Tech": [
+        "Developer at a dual-monitor setup, VS Code open with a dark theme, coffee mug and mechanical keyboard",
+        "Extreme close-up of keycaps on a mechanical keyboard, code reflected faintly in the monitor behind",
+        "A GitHub pull request diff page in a browser, green additions and red deletions clearly visible",
+        "GitHub trending page on a monitor, a repository star count ticking upward in real time",
+        "A terminal window mid-package installation, dependency tree scrolling in monospace text",
+        "Kubernetes dashboard in a browser showing container pods across a cluster, resource usage graphs",
+        "A developer's den — technical books stacked beside a laptop, sticky notes on monitor bezel",
+        "CI/CD pipeline diagram on a whiteboard, each build stage labelled with sticky notes and arrows",
+        "Close-up of a Raspberry Pi board on a workbench, surrounded by jumper wires and breadboards",
+        "A developer testing a web app across phone, tablet, and laptop simultaneously on a desk",
+        "Microservices architecture diagram drawn with markers on a glass office wall, team gathered around it",
+        "Dark-mode IDE with a component tree panel, props inspector, and live preview split across three panes",
+        "Network operations centre with a topology map glowing on a large screen, on-call engineer visible",
+        "Terminal showing a successful build — green checkmarks and 'Build passed' in bold monospace text",
+        "API documentation in a browser tab alongside a Postman window with a 200 OK response highlighted",
+        "A 3D printer building a circuit board prototype on a bench in a hardware startup's lab",
+        "Browser DevTools performance panel open, waterfall chart showing a page load timeline in detail",
+        "Pair programming — two developers sharing a workstation, one pointing at the screen, collaborative mood",
+        "Hackathon setting — laptops, energy drinks, sticky notes covering every surface, overhead lighting harsh",
+        "Cloud architecture diagram on a projector screen during a technical design review, team with laptops",
+    ],
+    "Blogs": [
+        "A developer's tidy desk at night — notebook, coffee, a markdown editor open with a half-written post",
+        "A whiteboard dense with system design diagrams, arrows, and margin notes being used to draft a blog post",
+        "Close-up of hands typing on a laptop, a markdown editor visible with formatted headers and code blocks",
+        "An engineering team crowded around a monitor, one person narrating while reviewing a draft technical post",
+        "A browser showing a technical article with syntax-highlighted code blocks and diagram illustrations",
+        "A conference speaker's handwritten notes spread across a desk alongside a laptop mid-draft",
+        "Stack of printed pages with dense margin annotations, being organised for a long-form engineering piece",
+        "Home office at 2 AM — monitor glowing with a draft blog post, rest of the room dark and quiet",
+        "A large technical mind map on paper, pen still in hand, arrows connecting architecture concepts",
+        "A developer recording their screen for a blog post walkthrough, phone propped up as a second camera",
+        "O'Reilly and technical books lined on a shelf beside a laptop running a static site generator preview",
+        "A distributed system diagram annotated with coloured markers — the base illustration for an engineering post",
+        "A pen-and-paper database schema sketch about to be photographed for a blog post illustration",
+        "A quiet library corner, a developer taking notes from documentation with a physical notebook and pen",
+        "A Slack thread printed and annotated, being prepared as source material for a postmortem blog post",
+        "Two co-authors reviewing a shared Google Doc on separate laptops, tracking changes visible in sidebar",
+        "A terminal showing benchmark comparison results — raw numbers being formatted for a performance article",
+        "A GitHub README being written, diagrams and code examples laid out in a split editor view",
+        "A developer's hand annotating a printed stack trace with a red marker for a debugging walkthrough post",
+        "An engineering all-hands slide deck open on screen, being adapted and repurposed into a blog article",
+    ],
+    "Market Trends": [
+        "A financial analyst studying four data screens showing market indices on a trading floor",
+        "Aerial view of a dense commercial district at golden hour, representing economic activity and scale",
+        "A bar chart showing year-on-year tech sector growth projected on a conference room screen",
+        "Close-up of a business newspaper front page with India IT sector headlines, coffee cup beside it",
+        "A Bloomberg terminal displaying live market data in a dim analyst's office, reflections on the screen",
+        "An economist presenting GDP growth slides to a corporate boardroom audience, charts behind them",
+        "A large LED wall displaying a market share pie chart during an industry analyst briefing",
+        "Overhead shot of an annual report spread open on a glass table, financial figures highlighted in yellow",
+        "A think-tank meeting room — analysts debating around a table with data projected on the wall",
+        "Satellite image of Bengaluru's tech corridor showing the density of campuses, roads, and infrastructure",
+        "Stock exchange trading floor during peak session, every screen filled with live price data, traders focused",
+        "A consultant's desk with a thick sector report, key paragraphs highlighted, handwritten margin notes",
+        "Heatmap of global tech hiring demand on a research analytics dashboard, India glowing bright",
+        "An executive reading a sector outlook report in a quiet lounge, charts visible, pen poised for notes",
+        "A startup ecosystem map of India pinned to a wall — cities, sectors, and funding flows marked",
+        "A finance team reviewing quarterly results on a shared dashboard in a glass-walled open office",
+        "India digital economy growth infographic on a wall display, trend line curving steeply upward",
+        "A research analyst's dual-monitor setup showing regression models and a scatter plot of trend data",
+        "Printed NASSCOM or sector report open on a desk, key statistics circled in red pen",
+        "A CEO being interviewed in a glass office, large chart on the wall behind showing industry performance",
+    ],
+    "Youtube": [
+        "A professional video recording setup — DSLR on tripod, ring light, acoustic foam panels on the wall",
+        "Extreme close-up of a camera lens, a blurred recording studio softly visible in the bokeh behind",
+        "A creator editing a tech tutorial in a video editor on a wide ultrawide monitor, timeline visible below",
+        "A condenser microphone in sharp focus in the foreground, softbox light illuminating a clean desk behind",
+        "Behind-the-scenes of a tech channel shoot — teleprompter, multi-camera rig, studio lighting overhead",
+        "A thumbnail design workspace — Photoshop open with a bold YouTube thumbnail in progress, layers panel",
+        "A dark studio with RGB LED strips along the ceiling, video editing timeline glowing on the screen",
+        "A 'Recording' red indicator light glowing in a dimly lit professional video studio",
+        "A content creator's desk with analytics dashboards on two monitors showing views, CTR, and watch time",
+        "A green screen setup in a home studio — camera on tripod, key light and fill light positioned carefully",
+        "A tripod-mounted camera aimed at a whiteboard, marker and eraser resting on the ledge, ready to film",
+        "Close-up of a Stream Deck controller with labelled shortcut buttons for a live streaming workflow",
+        "A dual-monitor live streaming setup — one screen showing the stream output, one showing scene controls",
+        "A creator under bright product lighting filming an unboxing, tech device partially unwrapped on desk",
+        "Aerial view of a podcast table — two microphones, headphones, water bottles, notebooks, and a mixer",
+        "A YouTube Studio dashboard on screen, subscriber growth chart climbing, latest video thumbnail visible",
+        "A creator reviewing raw footage on a laptop in a dimly lit editing suite, headphones on, focused",
+        "A teleprompter reflecting script text beside a camera aimed at a neatly dressed presenter's chair",
+        "Wide shot of a YouTube filming setup in a bright co-working space, natural light from large windows",
+        "A creator's production mood board — script notes, shot list, reference frames, and storyboard pinned up",
+    ],
 }
 
 _VERTICAL_ACCENT_COLORS = {
@@ -324,7 +498,7 @@ def _make_catchphrase(client, title: str, vertical: str) -> str:
             "Think magazine cover copy — bold, urgent, vivid. "
             "Title Case. No punctuation at the end. Return ONLY the phrase, nothing else."
         )
-        raw = _call_gemini(client, prompt) or ""
+        raw = _call_gemini_raw(client, prompt) or ""
         phrase = raw.strip().strip('"').strip("'").strip()
         if phrase and len(phrase) < 80:
             return phrase
@@ -335,6 +509,60 @@ def _make_catchphrase(client, title: str, vertical: str) -> str:
     return " ".join(words[:6]) + ("…" if len(words) > 6 else "")
 
 
+def _make_image_prompt(client, title: str, vertical: str, article_id: int, summary: str = "") -> str:
+    """Use Gemini to write a story-specific Imagen prompt in infographic/blog-thumbnail style."""
+    variants = _VERTICAL_SCENE_VARIANTS.get(vertical, _VERTICAL_SCENE_VARIANTS["Tech"])
+    fallback_icons = variants[article_id % len(variants)]
+
+    accent = _VERTICAL_ACCENT_COLORS.get(vertical, (13, 110, 253))
+    accent_hex = "#{:02x}{:02x}{:02x}".format(*accent)
+
+    context = f"Headline: \"{title}\""
+    if summary:
+        context += f"\nSummary: {summary}"
+
+    try:
+        gemini_prompt = (
+            f"{context}\n"
+            f"Category: {vertical}\n"
+            f"Accent color: {accent_hex}\n\n"
+            "You are a graphic designer creating a blog thumbnail for a tech news site. "
+            "Generate an Imagen prompt for a DESIGNED INFOGRAPHIC THUMBNAIL — NOT a photograph.\n\n"
+            "Style reference: dark navy or dark grey background, bold illustrated 3D icons relevant to the story "
+            "(robots, brain, charts, buildings, laptops, coins, etc.), vibrant neon accent colors, "
+            "clean modern layout, flat/semi-3D illustration style, like a professional blog cover image.\n\n"
+            "For THIS specific story, decide:\n"
+            "- What 2-3 illustrated icons or visual elements best represent the topic? "
+            "  (e.g. for AI model launch: glowing brain + neural network; for layoffs: empty office chair + door; "
+            "  for funding: coin stack + upward arrow + rocket; for hiring: handshake + resume + briefcase)\n"
+            "- What background gradient or pattern fits the mood? "
+            "  (dark navy with cyan grid for tech, dark red with cracks for layoffs, "
+            "  dark green with upward lines for hiring, purple with stars for AI)\n"
+            "- What accent color pops against the dark background?\n\n"
+            "Hard rules:\n"
+            "- ABSOLUTELY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS, NO SYMBOLS anywhere in the image — not even decorative or blurred\n"
+            "- NO logos, NO watermarks, NO human faces\n"
+            "- Illustrated / flat-design / 3D render style — NOT a photograph\n"
+            "- 16:9 aspect ratio, high detail, vibrant colors, professional blog thumbnail quality\n"
+            "- Only icons, shapes, objects, and abstract elements — zero text of any kind\n"
+            "- Return ONLY the final Imagen prompt sentence. No explanation."
+        )
+        raw = _call_gemini_raw(client, gemini_prompt, temperature=0.9) or ""
+        lines = [l.strip() for l in raw.strip().split("\n") if l.strip()]
+        generated = lines[-1].strip('"').strip("'") if lines else ""
+        if generated and 30 < len(generated) < 500:
+            logger.info("Image prompt for article %d: %s", article_id, generated)
+            return generated
+    except Exception as e:
+        logger.debug("Image prompt generation failed for article %d: %s", article_id, e)
+    # Fallback: generic infographic style for this vertical
+    return (
+        f"Blog thumbnail infographic, dark navy background, illustrated 3D icons: {fallback_icons}, "
+        f"vibrant {accent_hex} accent color, flat design style, "
+        "absolutely no text no letters no words no numbers no symbols, no logos, no faces, 16:9."
+    )
+
+
 def _overlay_headline(img_bytes: bytes, phrase: str, vertical: str) -> bytes:
     """Overlay a short phrase centered on the image with a clean dark vignette. Returns PNG bytes."""
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -343,99 +571,91 @@ def _overlay_headline(img_bytes: bytes, phrase: str, vertical: str) -> bytes:
     img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     W, H = img.size
 
-    # Subtle radial-style vignette: darken edges, darkest center-bottom
-    vignette = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    vdraw = ImageDraw.Draw(vignette)
-    # Uniform semi-dark overlay so text is readable anywhere
-    vdraw.rectangle([(0, 0), (W, H)], fill=(0, 0, 0, 110))
-    # Extra darkening toward center-vertical for text contrast
-    cx, cy = W // 2, H // 2
-    for r in range(min(cx, cy), 0, -8):
-        alpha = int(60 * (1 - r / min(cx, cy)))
-        vdraw.ellipse([(cx - r, cy - r), (cx + r, cy + r)], fill=(0, 0, 0, alpha))
+    accent = _VERTICAL_ACCENT_COLORS.get(vertical, (13, 110, 253))
+    r_a, g_a, b_a = accent
 
-    img = Image.alpha_composite(img, vignette)
-    draw = ImageDraw.Draw(img)
-
-    # Load font
-    font_large = font_small = None
+    # --- Load fonts ---
+    font_title = font_badge = font_tag = None
     for font_path in [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
     ]:
         if Path(font_path).exists():
-            font_large = ImageFont.truetype(font_path, size=max(40, H // 12))
-            font_small = ImageFont.truetype(font_path, size=max(20, H // 28))
+            font_title = ImageFont.truetype(font_path, size=max(44, H // 10))
+            font_badge = ImageFont.truetype(font_path, size=max(22, H // 24))
+            font_tag   = ImageFont.truetype(font_path, size=max(18, H // 30))
             break
 
-    accent = _VERTICAL_ACCENT_COLORS.get(vertical, (255, 255, 255))
+    draw = ImageDraw.Draw(img)
 
-    # Wrap phrase to max 2 lines centered
-    margin = int(W * 0.10)
-    max_w = W - margin * 2
+    # --- Bottom gradient bar (dark → transparent, bottom 40%) ---
+    bar_h = int(H * 0.55)
+    bar_top = H - bar_h
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    odraw = ImageDraw.Draw(overlay)
+    for y_off in range(bar_h):
+        alpha = int(210 * (y_off / bar_h) ** 0.6)
+        odraw.rectangle([(0, bar_top + y_off), (W, bar_top + y_off + 1)], fill=(10, 10, 20, alpha))
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    # --- Accent left border stripe ---
+    stripe_w = max(6, W // 80)
+    draw.rectangle([(0, 0), (stripe_w, H)], fill=(*accent, 255))
+
+    # --- Wrap title into lines (max 3, left-aligned inside safe margin) ---
+    margin_l = stripe_w + 28
+    margin_r = int(W * 0.06)
+    max_w = W - margin_l - margin_r
     words = phrase.split()
     lines, line = [], []
     for word in words:
         test = " ".join(line + [word])
-        tw = draw.textlength(test, font=font_large) if font_large else len(test) * 20
+        tw = draw.textlength(test, font=font_title) if font_title else len(test) * 22
         if tw <= max_w:
             line.append(word)
         else:
             if line:
                 lines.append(" ".join(line))
             line = [word]
-        if len(lines) >= 2:
+        if len(lines) >= 3:
             break
-    if line and len(lines) < 2:
+    if line and len(lines) < 3:
         lines.append(" ".join(line))
 
-    line_h = (font_large.size if font_large else 44) + 12
+    line_h = (font_title.size if font_title else 48) + 10
     text_block_h = len(lines) * line_h
-    ty = (H - text_block_h) // 2 - line_h // 4  # slightly above center
 
-    # Accent line above text
-    line_y = ty - 20
-    line_x1 = W // 2 - 40
-    line_x2 = W // 2 + 40
-    draw.rectangle([(line_x1, line_y), (line_x2, line_y + 4)], fill=(*accent, 255))
+    # Position: bottom section, above the very bottom
+    bottom_pad = int(H * 0.07)
+    ty = H - bottom_pad - text_block_h
 
-    # Text centered with multi-layer shadow for depth
+    # Accent underline beneath title block
+    underline_y = ty - 14
+    draw.rectangle([(margin_l, underline_y), (margin_l + min(120, max_w // 3), underline_y + 4)],
+                   fill=(*accent, 255))
+
+    # Title text with drop shadow
     for i, ln in enumerate(lines):
         y = ty + i * line_h
-        tw = draw.textlength(ln, font=font_large) if font_large else len(ln) * 20
-        x = (W - tw) // 2
-        for dx, dy, alpha in [(3, 3, 120), (1, 1, 80)]:
-            draw.text((x + dx, y + dy), ln, fill=(0, 0, 0, alpha), font=font_large)
-        draw.text((x, y), ln, fill=(255, 255, 255, 255), font=font_large)
+        for dx, dy in [(2, 2), (1, 1)]:
+            draw.text((margin_l + dx, y + dy), ln, fill=(0, 0, 0, 160), font=font_title)
+        draw.text((margin_l, y), ln, fill=(255, 255, 255, 255), font=font_title)
 
-    # Accent line below text
-    below_y = ty + text_block_h + 16
-    draw.rectangle([(line_x1, below_y), (line_x2, below_y + 4)], fill=(*accent, 255))
-
-    # Subtle vertical label bottom-right
-    label = vertical.upper()
-    lw = draw.textlength(label, font=font_small) if font_small else len(label) * 10
-    draw.text((W - lw - 20, H - (font_small.size if font_small else 22) - 16), label,
-              fill=(*accent, 200), font=font_small)
 
     out = io.BytesIO()
     img.convert("RGB").save(out, format="PNG", optimize=True)
     return out.getvalue()
 
 
-def _generate_article_image(article_id: int, title: str, vertical: str) -> str | None:
+def _generate_article_image(article_id: int, title: str, vertical: str, summary: str = "") -> str | None:
     """Generate a Gemini Imagen background, overlay headline, save to static/ai-images/."""
     # Call _get_http_client() first — this populates _vertex_project as a side effect
     client = _get_http_client()
     api_key = os.getenv("GEMINI_API_KEY")
 
-    theme = _VERTICAL_IMAGE_THEMES.get(vertical, "technology, business, innovation")
-    prompt = (
-        f"Editorial news photograph. Visual themes: {theme}. "
-        "Wide shot, clean professional composition, photorealistic, "
-        "no text, no watermarks, no logos, no people's faces."
-    )
+    prompt = _make_image_prompt(client, title, vertical, article_id, summary)
 
     try:
         if api_key:
@@ -470,14 +690,57 @@ def _generate_article_image(article_id: int, title: str, vertical: str) -> str |
         logger.info("Catchphrase for article %d: %s", article_id, phrase)
         infographic_bytes = _overlay_headline(raw_bytes, phrase, vertical)
 
+        # Save locally
         out_dir = Path(__file__).parent.parent / "static" / "ai-images"
         out_dir.mkdir(exist_ok=True)
         img_path = out_dir / f"{article_id}.png"
         img_path.write_bytes(infographic_bytes)
         logger.info("Generated infographic for article %d -> %s", article_id, img_path.name)
-        return f"/static/ai-images/{article_id}.png"
+
+        # Upload to S3 and return the public URL if successful
+        s3_url = _upload_image_to_s3(article_id, infographic_bytes)
+        return s3_url or f"/static/ai-images/{article_id}.png"
     except Exception as e:
         logger.warning("Image generation failed for article %d: %s", article_id, e)
+        return None
+
+
+def _upload_image_to_s3(article_id: int, img_bytes: bytes) -> str | None:
+    """Upload PNG bytes to S3 qahiristmedia/ai-images/<id>.png and return the public URL.
+
+    Uses the server's IAM role (instance profile) by default.
+    Falls back to AWS_S3_KEY/AWS_S3_SECRET env vars for local dev.
+    """
+    try:
+        import boto3
+        from botocore.exceptions import BotoCoreError, ClientError
+
+        # Explicit keys for local dev; on server the IAM role is picked up automatically
+        aws_key    = os.getenv("AWS_S3_KEY")
+        aws_secret = os.getenv("AWS_S3_SECRET")
+        kwargs = {"region_name": _S3_REGION}
+        if aws_key and aws_secret:
+            kwargs["aws_access_key_id"]     = aws_key
+            kwargs["aws_secret_access_key"] = aws_secret
+
+        s3  = boto3.client("s3", **kwargs)
+        # Timestamp suffix so re-generations don't collide with old S3 objects
+        key = f"{_S3_PREFIX}{article_id}_{int(time.time())}.png"
+        s3.put_object(
+            Bucket=_S3_BUCKET,
+            Key=key,
+            Body=img_bytes,
+            ContentType="image/png",
+            ACL="public-read",
+        )
+        url = f"{_S3_BASE_URL}{key}"
+        logger.info("Uploaded article %d image to S3: %s", article_id, url)
+        return url
+    except (BotoCoreError, ClientError) as e:
+        logger.warning("S3 upload failed for article %d: %s", article_id, e)
+        return None
+    except ImportError:
+        logger.warning("boto3 not installed — skipping S3 upload")
         return None
 
 
@@ -519,6 +782,22 @@ _VALID_VERTICALS = frozenset([
     "Hiring", "Layoffs", "Funding", "AI", "Tech", "Blogs", "Market Trends", "Youtube",
 ])
 _VERTICAL_MAP = {v.lower(): v for v in _VALID_VERTICALS}
+
+
+def _call_gemini_raw(client: httpx.Client, user_msg: str, temperature: float = 0.8) -> str | None:
+    """Gemini call without the news-classifier system prompt — for creative/freeform tasks."""
+    if _vertex_project:
+        url = _GEMINI_VERTEX_URL.format(project=_vertex_project, model=_MODEL)
+    else:
+        url = _GEMINI_AI_STUDIO_URL.format(model=_MODEL)
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": user_msg}]}],
+        "generationConfig": {"temperature": temperature, "maxOutputTokens": 512, "thinkingConfig": {"thinkingBudget": 0}},
+    }
+    resp = client.post(url, json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def _call_gemini(client: httpx.Client, user_msg: str) -> str | None:
@@ -599,6 +878,7 @@ def enrich_batch(article_ids: list[int]) -> None:
                     article.id,
                     article.ai_title or article.title,
                     article.vertical or "Tech",
+                    article.ai_summary or "",
                 )
             article.ai_enriched_at = now
             db.commit()
