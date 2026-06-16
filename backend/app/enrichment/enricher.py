@@ -426,9 +426,6 @@ def _overlay_headline(img_bytes: bytes, phrase: str, vertical: str) -> bytes:
 
 def _generate_article_image(article_id: int, title: str, vertical: str) -> str | None:
     """Generate a Gemini Imagen background, overlay headline, save to static/ai-images/."""
-    if not _GENERATE_IMAGES:
-        return None
-
     # Call _get_http_client() first — this populates _vertex_project as a side effect
     client = _get_http_client()
     api_key = os.getenv("GEMINI_API_KEY")
@@ -597,7 +594,7 @@ def enrich_batch(article_ids: list[int]) -> None:
                 article.ai_title, article.ai_summary, article.vertical, article.hiring_relevant, og_image = result
                 if og_image and not article.image_url:
                     article.image_url = og_image
-            if not article.image_url:
+            if not article.image_url and _GENERATE_IMAGES:
                 article.image_url = _generate_article_image(
                     article.id,
                     article.ai_title or article.title,
