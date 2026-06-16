@@ -44,9 +44,14 @@ def sources_of_type(*types: str) -> list[dict]:
 
 
 def sources_of_type_and_vertical(vertical: str, *types: str) -> list[dict]:
-    """Filter enabled sources by type(s) AND vertical (matched via category or vertical field)."""
+    """Filter enabled sources by type(s) AND vertical (matched via category or vertical field).
+    Accepts either a vertical name ('Hiring') or a category key ('recruitment')."""
     vertical_lower = vertical.lower()
+    # If given a vertical name like "Hiring", find all category keys that map to it
     matching_categories = {k for k, v in CATEGORY_TO_VERTICAL.items() if v.lower() == vertical_lower}
+    # If given a category key like "recruitment" directly, include it too
+    if vertical_lower in CATEGORY_TO_VERTICAL:
+        matching_categories.add(vertical_lower)
     return [
         s for s in _load()
         if s.get("type") in types
