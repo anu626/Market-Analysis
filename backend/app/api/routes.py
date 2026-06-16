@@ -356,6 +356,58 @@ def backfill_enrichment(limit: int = Query(50, ge=1, le=100000)):
     return {"status": "started", "limit": limit}
 
 
+@router.post("/enrich/images/reset")
+def reset_ai_image_urls(db: Session = Depends(get_db)):
+    """Clear ai_image_url on all articles so images can be regenerated."""
+    updated = db.query(Article).filter(Article.ai_image_url.isnot(None)).update({"ai_image_url": None})
+    db.commit()
+    return {"status": "ok", "cleared": updated}
+
+
+@router.post("/enrich/images/backfill")
+def backfill_images(
+    limit: int = Query(250, ge=1, le=10000),
+    db: Session = Depends(get_db),
+):
+    """Generate + upload S3 images for all enriched articles missing ai_image_url."""
+    import threading, time as _time
+    from app.enrichment.enricher import _get_http_client, _generate_article_image
+
+    ids = [
+        row.id for row in
+        db.query(Article.id)
+        .filter(Article.ai_enriched_at.isnot(None), Article.ai_image_url.is_(None))
+        .order_by(Article.id.desc())
+        .limit(limit)
+        .all()
+    ]
+
+    def _run(article_ids):
+        from app.database import SessionLocal
+        from app.enrichment.enricher import _get_http_client, _generate_article_image
+        client = _get_http_client()
+        if not client:
+            return
+        session = SessionLocal()
+        try:
+            articles = session.query(Article).filter(Article.id.in_(article_ids)).all()
+            for a in articles:
+                path = _generate_article_image(
+                    a.id, a.ai_title or a.title, a.vertical or "Tech", a.ai_summary or ""
+                )
+                if path:
+                    a.ai_image_url = path
+                    session.commit()
+                _time.sleep(2)
+        except Exception as e:
+            session.rollback()
+        finally:
+            session.close()
+
+    threading.Thread(target=_run, args=(ids,), daemon=True).start()
+    return {"status": "started", "queued": len(ids)}
+
+
 @router.post("/ingest", response_model=IngestionResult)
 def trigger_ingestion(db: Session = Depends(get_db)):
     """Manual trigger. Runs synchronously — fine for prototype, slow for prod."""
