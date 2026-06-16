@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import case, func, or_, and_
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,15 @@ from app.services.ingestion_service import run_full_ingestion, run_vertical_inge
 
 
 
-def _dedup_by_story(rows: list, offset: int, limit: int) -> list[dict]:
+def _resolve_ai_image(ai_image_url: str | None, base_url: str) -> str | None:
+    if not ai_image_url:
+        return None
+    if ai_image_url.startswith("http"):
+        return ai_image_url
+    return f"{base_url.rstrip('/')}{ai_image_url}"
+
+
+def _dedup_by_story(rows: list, offset: int, limit: int, base_url: str = "") -> list[dict]:
     """Deduplicate articles sharing the same story_hash, keeping the top-ranked.
     Returns dicts with an injected source_count and source_logo field."""
     logos = get_logo_map()
@@ -23,6 +31,7 @@ def _dedup_by_story(rows: list, offset: int, limit: int) -> list[dict]:
         key = r.story_hash or str(r.id)
         d = ArticleOut.model_validate(r).model_dump()
         d["source_logo"] = logos.get(r.source_name)
+        d["ai_image_url"] = _resolve_ai_image(d.get("ai_image_url"), base_url)
         if key not in seen:
             seen[key] = d
             counts[key] = {r.source_name}
@@ -114,6 +123,7 @@ def _quality_order():
 
 @router.get("/articles", response_model=list[ArticleOut])
 def list_articles(
+    request: Request,
     db: Session = Depends(get_db),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -138,7 +148,7 @@ def list_articles(
         .limit((offset + limit) * 5)
         .all()
     )
-    payload = _dedup_by_story(rows, offset, limit)
+    payload = _dedup_by_story(rows, offset, limit, str(request.base_url))
     cache_set(cache_key, payload)
     return payload
 
@@ -237,6 +247,7 @@ def vertical_digest(
 
 @router.get("/articles/category/{category}", response_model=list[ArticleOut])
 def articles_by_category(
+    request: Request,
     category: str,
     db: Session = Depends(get_db),
     limit: int = Query(50, ge=1, le=200),
@@ -288,7 +299,7 @@ def articles_by_category(
             .limit((offset + limit) * 5)
             .all()
         )
-    payload = _dedup_by_story(rows, offset, limit)
+    payload = _dedup_by_story(rows, offset, limit, str(request.base_url))
     cache_set(cache_key, payload)
     return payload
 
