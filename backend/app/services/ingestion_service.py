@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.dedup.deduplicator import find_duplicate, merge_into_existing
+from app.ingestion.source_loader import CATEGORY_TO_VERTICAL
 from app.ingestion.hn_fetcher import fetch_hn
 from app.ingestion.json_api_fetcher import fetch_json_api
 from app.ingestion.layoffs_fyi_scraper import fetch_layoffs_fyi
@@ -71,7 +72,7 @@ def _persist_batch(db: Session, raw_items: list[dict], source_type: str) -> dict
                 continue
             seen_urls.add(url)
 
-            vertical = item.get("vertical", "tech")
+            vertical = CATEGORY_TO_VERTICAL.get(item.get("vertical", "tech").lower(), item.get("vertical", "tech"))
             src = _ensure_source(db, item["source_name"], source_type, vertical)
 
             existing = find_duplicate(db, url=url, title=item["title"])
