@@ -20,6 +20,7 @@ class ArticleOut(BaseModel):
     ai_summary: str | None = None
     hiring_relevant: bool = False
     image_url: str | None = None
+    ai_image_url: str | None = None
 
     class Config:
         from_attributes = True

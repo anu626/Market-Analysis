@@ -358,7 +358,7 @@ def trigger_image_generation(
     """Generate AI infographic images for articles that have no image_url. Manual trigger only."""
     from app.enrichment.enricher import _generate_article_image
 
-    query = db.query(Article).filter(Article.image_url.is_(None))
+    query = db.query(Article).filter(Article.ai_image_url.is_(None))
     if vertical:
         query = query.filter(Article.vertical == vertical)
     articles = query.order_by(Article.rank_score.desc()).limit(limit).all()
@@ -371,7 +371,7 @@ def trigger_image_generation(
             article.vertical or "Tech",
         )
         if url:
-            article.image_url = url
+            article.ai_image_url = url
             db.commit()
             generated += 1
         else:

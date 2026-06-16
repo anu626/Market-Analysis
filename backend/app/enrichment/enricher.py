@@ -594,8 +594,8 @@ def enrich_batch(article_ids: list[int]) -> None:
                 article.ai_title, article.ai_summary, article.vertical, article.hiring_relevant, og_image = result
                 if og_image and not article.image_url:
                     article.image_url = og_image
-            if not article.image_url and _GENERATE_IMAGES:
-                article.image_url = _generate_article_image(
+            if not article.ai_image_url and _GENERATE_IMAGES:
+                article.ai_image_url = _generate_article_image(
                     article.id,
                     article.ai_title or article.title,
                     article.vertical or "Tech",
