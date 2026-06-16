@@ -108,7 +108,48 @@ sources:
     category: recruitment
     authority: 0.65
     tier: 2
-
+  - name: ERE Media
+    type: rss
+    url: https://www.ere.net/feed/
+    country: US
+    category: recruitment
+    authority: 0.78
+    tier: 2
+  - name: SHRM HR News
+    type: rss
+    url: https://www.shrm.org/rss/rss.aspx
+    country: US
+    category: recruitment
+    authority: 0.85
+    tier: 2
+  - name: Google News - GCC Hiring India
+    type: google_news
+    url: https://news.google.com/rss/search?q=%22global+capability+center%22+OR+%22GCC%22+hiring+india&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: recruitment
+    authority: 0.7
+    tier: 1
+  - name: Google News - BFSI Hiring India
+    type: google_news
+    url: https://news.google.com/rss/search?q=%22BFSI%22+OR+%22banking%22+OR+%22fintech%22+hiring+india&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: recruitment
+    authority: 0.65
+    tier: 2
+  - name: Google News - NASSCOM Workforce India
+    type: google_news
+    url: https://news.google.com/rss/search?q=NASSCOM+hiring+OR+workforce+OR+%22IT+sector+jobs%22+india&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: recruitment
+    authority: 0.7
+    tier: 2
+  - name: Google News - Freshers Jobs India
+    type: google_news
+    url: https://news.google.com/rss/search?q=%22off+campus%22+OR+%22fresher+hiring%22+OR+%22entry+level%22+tech+india+2025&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: recruitment
+    authority: 0.6
+    tier: 2
 
   # ---------------------------------------------------
   # 2. LAYOFFS
@@ -188,6 +229,69 @@ sources:
     category: layoffs
     authority: 0.55
     tier: 1
+  - name: Reuters Technology
+    type: rss
+    url: https://feeds.reuters.com/reuters/technologyNews
+    country: GLOBAL
+    category: layoffs
+    authority: 0.95
+    tier: 1
+  - name: CNBC Technology
+    type: rss
+    url: https://www.cnbc.com/id/19854910/device/rss/rss.html
+    country: US
+    category: layoffs
+    authority: 0.85
+    tier: 1
+  - name: Fortune Technology
+    type: rss
+    url: https://fortune.com/section/technology/feed/
+    country: US
+    category: layoffs
+    authority: 0.85
+    tier: 1
+  - name: Business Standard - Companies
+    type: rss
+    url: https://www.business-standard.com/rss/companies-101.rss
+    country: IN
+    category: layoffs
+    authority: 0.85
+    tier: 1
+  - name: The Hindu BusinessLine
+    type: rss
+    url: https://www.thehindubusinessline.com/feeder/default.rss
+    country: IN
+    category: layoffs
+    authority: 0.8
+    tier: 2
+  - name: Firstpost Tech
+    type: rss
+    url: https://www.firstpost.com/rss/tech.xml
+    country: IN
+    category: layoffs
+    authority: 0.72
+    tier: 2
+  - name: Google News - IT Sector Job Cuts India
+    type: google_news
+    url: https://news.google.com/rss/search?q=%22job+cuts%22+OR+%22retrenchment%22+OR+%22pink+slip%22+IT+india&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: layoffs
+    authority: 0.65
+    tier: 1
+  - name: Google News - India Startup Shutdown
+    type: google_news
+    url: https://news.google.com/rss/search?q=india+startup+shutdown+OR+%22ceases+operations%22+OR+%22shuts+down%22+2025&hl=en-IN&gl=IN&ceid=IN:en
+    country: IN
+    category: layoffs
+    authority: 0.6
+    tier: 2
+  - name: Google News - WARN Act Layoffs
+    type: google_news
+    url: https://news.google.com/rss/search?q=%22WARN+notice%22+OR+%22WARN+act%22+layoffs+tech&hl=en&gl=US&ceid=US:en
+    country: US
+    category: layoffs
+    authority: 0.7
+    tier: 2
 
   # ---------------------------------------------------
   # 3. FUNDING (= future hiring signal)
