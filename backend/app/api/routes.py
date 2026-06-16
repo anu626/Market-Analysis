@@ -304,6 +304,33 @@ def articles_by_category(
     return payload
 
 
+@router.get("/articles/ai-images", response_model=list[ArticleOut])
+def articles_with_ai_images(
+    request: Request,
+    db: Session = Depends(get_db),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    vertical: str | None = Query(None, description="Filter by vertical e.g. Layoffs, Hiring, AI"),
+):
+    """Return articles that have an AI-generated infographic image."""
+    logos = get_logo_map()
+    base_url = str(request.base_url)
+
+    query = db.query(Article).filter(Article.ai_image_url.isnot(None))
+    if vertical:
+        query = query.filter(Article.vertical == vertical)
+
+    rows = query.order_by(Article.rank_score.desc()).offset(offset).limit(limit).all()
+
+    payload = []
+    for r in rows:
+        d = ArticleOut.model_validate(r).model_dump()
+        d["source_logo"] = logos.get(r.source_name)
+        d["ai_image_url"] = _resolve_ai_image(d.get("ai_image_url"), base_url)
+        payload.append(d)
+    return payload
+
+
 @router.get("/articles/{article_id}", response_model=ArticleOut)
 def get_article(article_id: int, db: Session = Depends(get_db)):
     row = db.get(Article, article_id)
