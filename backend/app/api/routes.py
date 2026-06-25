@@ -139,7 +139,7 @@ def _apply_vertical(q, vertical: str | None):
     if not vertical:
         return q
     if vertical == "Tech":
-        return q.filter(Article.vertical.in_(["Tech", "Market Trends"]))
+        return q.filter(Article.vertical == "Tech")
     return q.filter(Article.vertical == vertical)
 
 
