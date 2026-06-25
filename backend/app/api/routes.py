@@ -143,6 +143,70 @@ def _apply_vertical(q, vertical: str | None):
     return q.filter(Article.vertical == vertical)
 
 
+_FEED_VERTICALS = ["Hiring", "Layoffs", "Funding", "AI", "Tech", "Market Trends", "Blogs"]
+
+
+def _diverse_feed(db: Session, limit: int, offset: int, source: str | None, search: str | None) -> list[dict]:
+    """Round-robin across verticals so no single vertical dominates the feed."""
+    logos = get_logo_map()
+    ai_priority = case(
+        (Article.ai_title.isnot(None) & Article.ai_summary.isnot(None), 0),
+        (Article.ai_title.isnot(None), 1),
+        else_=2,
+    )
+    per_vertical = (offset + limit) * 3
+    buckets: dict[str, list] = {}
+    for v in _FEED_VERTICALS:
+        q = db.query(Article).filter(Article.vertical == v)
+        if source:
+            q = q.filter(Article.source_name == source)
+        if search:
+            q = _apply_search(q, search)
+        buckets[v] = q.order_by(ai_priority, Article.rank_score.desc()).limit(per_vertical).all()
+
+    # Round-robin interleave
+    interleaved = []
+    seen_hashes: set[str] = set()
+    idx = {v: 0 for v in _FEED_VERTICALS}
+    while len(interleaved) < (offset + limit) * 5:
+        added = False
+        for v in _FEED_VERTICALS:
+            bucket = buckets[v]
+            i = idx[v]
+            while i < len(bucket):
+                row = bucket[i]
+                i += 1
+                key = row.story_hash or str(row.id)
+                if key not in seen_hashes:
+                    seen_hashes.add(key)
+                    interleaved.append(row)
+                    added = True
+                    break
+            idx[v] = i
+        if not added:
+            break
+
+    # Build output with dedup and source_count
+    seen_out: dict[str, dict] = {}
+    counts: dict[str, set] = {}
+    for r in interleaved:
+        key = r.story_hash or str(r.id)
+        if key not in seen_out:
+            d = ArticleOut.model_validate(r).model_dump()
+            d["source_logo"] = logos.get(r.source_name)
+            seen_out[key] = d
+            counts[key] = {r.source_name}
+        else:
+            counts[key].add(r.source_name)
+
+    result = []
+    for key, article in seen_out.items():
+        article["source_count"] = len(counts[key])
+        result.append(article)
+
+    return result[offset: offset + limit]
+
+
 def _apply_search(q, search: str | None):
     if not search:
         return q
@@ -169,11 +233,18 @@ def list_articles(
     source: str | None = Query(None),
     q: str | None = Query(None, description="Search title and summary"),
     vertical: str | None = Query(None, description="tech | business"),
+    diverse: bool = Query(True, description="Round-robin across verticals for a balanced feed"),
 ):
-    cache_key = f"articles:ranked:{source or 'all'}:{q or '_'}:{vertical or 'all'}:{limit}:{offset}"
+    cache_key = f"articles:ranked:{source or 'all'}:{q or '_'}:{vertical or 'all'}:{diverse}:{limit}:{offset}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
+
+    # Diverse mode — round-robin across verticals so no single vertical dominates
+    if diverse and not vertical and not source and not q:
+        payload = _diverse_feed(db, limit, offset, source, q)
+        cache_set(cache_key, payload)
+        return payload
 
     query = db.query(Article)
     if source:
